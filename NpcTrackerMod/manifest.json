@@ -1,0 +1,10 @@
+﻿{
+  "Name": "NpcTrackerMod",
+  "Author": "ScarFace",
+  "Version": "1.0.0",
+  "Description": "Tracking the path of the NPC",
+  "UniqueID": "ScarFace.NpcTrackerMod",
+  "EntryDll": "NpcTrackerMod.dll",
+  "MinimumApiVersion": "3.0.0",
+  "UpdateKeys": []
+}
