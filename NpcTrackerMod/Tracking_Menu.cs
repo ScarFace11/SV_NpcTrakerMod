@@ -6,35 +6,30 @@ using System.Collections.Generic;
 using StardewValley.BellsAndWhistles;
 using StardewModdingAPI;
 using System.Threading;
+using System.Linq;
 
 namespace NpcTrackerMod
 {
 
     public class TrackingMenu : IClickableMenu
     {
-
-        private string title = "Tracking Menu"; // Название меню
-
-        private Texture2D background;
-        //private readonly OptionsCheckbox DisplayGridCheckbox;    
-        //private readonly OptionsCheckbox SwitchTargetLocationsCheckbox;
-        //private readonly OptionsCheckbox SwitchTargetNPCCheckbox;
-
         private readonly ClickableCheckbox DisplayGridCheckbox;
         private readonly ClickableCheckbox SwitchTargetLocationsCheckbox;
         private readonly ClickableCheckbox SwitchTargetNPCCheckbox;
 
         private ClickableTextureComponent exitButton;
 
+        private ClickableTextureComponent leftArrowButton;
+        private ClickableTextureComponent rightArrowButton;
+        private string displayText = "Npc Name"; // Пример текста, который будет отображаться между кнопками
+
+
         public TrackingMenu()
         : base(Game1.viewport.Width / 2 - 300, Game1.viewport.Height / 2 - 300, 600, 600, true)
         {
-            background = Game1.menuTexture;
 
             // Ваша инициализация чекбоксов
-            //DisplayGridCheckbox = new OptionsCheckbox("Включение сетки", -1, -1);
-            //SwitchTargetLocationsCheckbox = new OptionsCheckbox("Отображение всех локаций", -1, -1);
-            //SwitchTargetNPCCheckbox = new OptionsCheckbox("Выбор нпс", -1, -1);
+
             if (NpcTrackerMod.Instance == null)
             {
                 // Здесь можно добавить обработку ошибки или попытаться инициализировать объект
@@ -66,56 +61,22 @@ namespace NpcTrackerMod
                 4f
             );
 
+            // Инициализация кнопок с иконками стрелок
+            leftArrowButton = new ClickableTextureComponent(
+                new Rectangle(xPositionOnScreen + 30, yPositionOnScreen + 300, 50, 50),
+                Game1.mouseCursors,
+                new Rectangle(352, 495, 12, 11),
+                4f
+            );
+            rightArrowButton = new ClickableTextureComponent(
+                new Rectangle(xPositionOnScreen + 250, yPositionOnScreen + 300, 50, 50),
+                Game1.mouseCursors,
+                new Rectangle(365, 495, 12, 11),
+                4f
+            );
+
         }
 
-        /*
-        public override void draw(SpriteBatch b)
-        {
-            // Draw background within menu bounds
-            b.Draw(background, new Rectangle(xPositionOnScreen, yPositionOnScreen, width, height), Color.White);
-
-            // Draw title
-            SpriteText.drawString(b, "NPC Tracker Menu", xPositionOnScreen + 100, yPositionOnScreen + 40);
-
-            // Draw checkboxes with spacing
-            DisplayGridCheckbox.draw(b, xPositionOnScreen + 30, yPositionOnScreen + 100);
-            SwitchTargetLocationsCheckbox.draw(b, xPositionOnScreen + 30, yPositionOnScreen + 150);
-            SwitchTargetNPCCheckbox.draw(b, xPositionOnScreen + 30, yPositionOnScreen + 200);
-
-            // Draw exit button
-            if (exitButton != null)
-                exitButton.draw(b);
-
-            drawMouse(b);
-        }
-        */
-        /*
-        public override void draw(SpriteBatch b)
-        {
-            
-            // Draw background within menu bounds
-            //b.Draw(background, new Rectangle(xPositionOnScreen, yPositionOnScreen, width, height), Color.White);
-            IClickableMenu.drawTextureBox(b, Game1.menuTexture, new Rectangle(0, 256, 60, 60), xPositionOnScreen, yPositionOnScreen, width, height, Color.White, 1f, true);
-
-            // Draw title
-            SpriteText.drawString(b, "NPC Tracker Menu", xPositionOnScreen + 100, yPositionOnScreen + 40);
-
-            // Draw checkboxes with spacing
-            //DisplayGridCheckbox.draw(b, xPositionOnScreen + 30, yPositionOnScreen + 100, this);
-            //SwitchTargetLocationsCheckbox.draw(b, xPositionOnScreen + 30, yPositionOnScreen + 150, this);
-            //SwitchTargetNPCCheckbox.draw(b, xPositionOnScreen + 30, yPositionOnScreen + 200, this);
-
-            DisplayGridCheckbox.draw(b);
-            SwitchTargetLocationsCheckbox.draw(b);
-            SwitchTargetNPCCheckbox.draw(b);
-
-            // Draw exit button
-            //if (exitButton != null)
-            //exitButton.draw(b);
-
-            drawMouse(b);
-        }
-        */
         public override void draw(SpriteBatch b)
         {
             // Отрисовка фона
@@ -129,6 +90,16 @@ namespace NpcTrackerMod
             SwitchTargetLocationsCheckbox.draw(b);
             SwitchTargetNPCCheckbox.draw(b);
 
+            // Отрисовка кнопок со стрелками и текста между ними
+            leftArrowButton.draw(b);
+            rightArrowButton.draw(b);
+            Utility.drawTextWithShadow(b, displayText, Game1.dialogueFont, new Vector2(xPositionOnScreen + 100, yPositionOnScreen + 315), Game1.textColor);
+
+            if (SwitchTargetNPCCheckbox.isChecked && NpcTrackerMod.Instance.NpcList.Any())
+            {
+                displayText = NpcTrackerMod.Instance.NpcList[NpcTrackerMod.Instance.NpcSelected];
+            }
+
             // Отрисовка кнопки выхода
             drawMouse(b);
         }
@@ -138,22 +109,46 @@ namespace NpcTrackerMod
         {
             base.receiveLeftClick(x, y, playSound);
 
-            // Check if exit button is clicked
+            // Обработка нажатия на кнопку выхода
             if (exitButton.containsPoint(x, y))
             {
                 exitThisMenu();
                 return;
             }
 
-            // Toggle the checkboxes
+            // Обработка нажатия на кнопку с левой стрелкой
+            if (leftArrowButton.containsPoint(x, y) && SwitchTargetNPCCheckbox.isChecked)
+            {
+                // Логика для нажатия на левую стрелку
+                if (NpcTrackerMod.Instance.NpcList.Any() && NpcTrackerMod.Instance.NpcSelected > 0)
+                {
+                    NpcTrackerMod.Instance.NpcSelected--;
+                    displayText = NpcTrackerMod.Instance.NpcList[NpcTrackerMod.Instance.NpcSelected];
+                    NpcTrackerMod.Instance.tileStates.Clear();
+                    NpcTrackerMod.Instance.Switchnpcpath = false;
+                }
+            }
+
+            // Обработка нажатия на кнопку с правой стрелкой
+            if (rightArrowButton.containsPoint(x, y) && SwitchTargetNPCCheckbox.isChecked)
+            {
+                // Логика для нажатия на правую стрелку
+                if (NpcTrackerMod.Instance.NpcList.Any() && NpcTrackerMod.Instance.NpcSelected < NpcTrackerMod.Instance.NpcList.Count() - 1)
+                {
+                    NpcTrackerMod.Instance.NpcSelected++;
+                    displayText = NpcTrackerMod.Instance.NpcList[NpcTrackerMod.Instance.NpcSelected];
+                    NpcTrackerMod.Instance.tileStates.Clear();
+                    NpcTrackerMod.Instance.Switchnpcpath = false;
+                }
+            }
+
+            // Переключение чекбоксов
             if (DisplayGridCheckbox.containsPoint(x, y))
             {
                 NpcTrackerMod.Instance.DisplayGrid = !NpcTrackerMod.Instance.DisplayGrid;
                 DisplayGridCheckbox.isChecked = NpcTrackerMod.Instance.DisplayGrid;
-                
-
             }
-            
+
             if (DisplayGridCheckbox.isChecked && SwitchTargetLocationsCheckbox.containsPoint(x, y))
             {
                 NpcTrackerMod.Instance.SwitchTargetLocations = !NpcTrackerMod.Instance.SwitchTargetLocations;
@@ -161,12 +156,21 @@ namespace NpcTrackerMod
                 NpcTrackerMod.Instance.tileStates.Clear();
             }
 
-
             if (DisplayGridCheckbox.isChecked && SwitchTargetNPCCheckbox.containsPoint(x, y))
             {
                 NpcTrackerMod.Instance.SwitchTargetNPC = !NpcTrackerMod.Instance.SwitchTargetNPC;
                 SwitchTargetNPCCheckbox.isChecked = NpcTrackerMod.Instance.SwitchTargetNPC;
                 NpcTrackerMod.Instance.tileStates.Clear();
+                NpcTrackerMod.Instance.NpcList.Clear();
+
+                if (SwitchTargetNPCCheckbox.isChecked)
+                {
+                    NpcTrackerMod.Instance.NpcSelected = 0;
+                  
+                }
+
+                displayText = "Npc Name";
+                
             }
         }
 
@@ -181,7 +185,7 @@ namespace NpcTrackerMod
             private string label;
 
             public ClickableCheckbox(Rectangle bounds, string label, bool isChecked)
-                : base(bounds, label) // Передаем bounds и label в базовый конструктор
+                : base(bounds, label)
             {
                 this.label = label;
                 this.isChecked = isChecked;
@@ -189,13 +193,10 @@ namespace NpcTrackerMod
 
             public void draw(SpriteBatch b)
             {
-                // Отрисовка флажка (checkbox)
-                // Изначально показываем пустой квадрат
                 b.Draw(Game1.mouseCursors, new Vector2(bounds.X, bounds.Y),
                     isChecked ? new Rectangle(128, 256, 64, 64) : new Rectangle(192, 256, 64, 64),
                     Color.White, 0f, Vector2.Zero, 0.75f, SpriteEffects.None, 0.4f);
 
-                // Отрисовка текста рядом с флажком, с выравниванием по вертикали
                 Vector2 textPosition = new Vector2(bounds.X + 70, bounds.Y + (bounds.Height / 2) - (Game1.dialogueFont.MeasureString(label).Y / 2));
                 Utility.drawTextWithShadow(b, label, Game1.dialogueFont, textPosition, Game1.textColor);
             }
