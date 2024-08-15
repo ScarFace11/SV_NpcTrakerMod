@@ -55,7 +55,7 @@ namespace NpcTrackerMod
 
             // Инициализация кнопки выхода
             exitButton = new ClickableTextureComponent(
-                new Rectangle(xPositionOnScreen + width - 60, yPositionOnScreen + 10, 50, 50),
+                new Rectangle(xPositionOnScreen + width - 80, yPositionOnScreen + 30, 30, 30),
                 Game1.mouseCursors,
                 new Rectangle(337, 494, 12, 12),
                 4f
@@ -79,6 +79,7 @@ namespace NpcTrackerMod
 
         public override void draw(SpriteBatch b)
         {
+            
             // Отрисовка фона
             IClickableMenu.drawTextureBox(b, Game1.menuTexture, new Rectangle(0, 256, 60, 60), xPositionOnScreen, yPositionOnScreen, width, height, Color.White, 1f, true);
 
@@ -100,8 +101,10 @@ namespace NpcTrackerMod
                 displayText = NpcTrackerMod.Instance.NpcList[NpcTrackerMod.Instance.NpcSelected];
             }
 
+            exitButton.draw(b);
             // Отрисовка кнопки выхода
             drawMouse(b);
+
         }
 
 
@@ -179,6 +182,7 @@ namespace NpcTrackerMod
         {
             SpriteText.drawString(b, text, x, y, color: color);
         }
+
         public class ClickableCheckbox : ClickableComponent
         {
             public bool isChecked;
@@ -190,12 +194,17 @@ namespace NpcTrackerMod
                 this.label = label;
                 this.isChecked = isChecked;
             }
-
+            
             public void draw(SpriteBatch b)
             {
+                /*
                 b.Draw(Game1.mouseCursors, new Vector2(bounds.X, bounds.Y),
                     isChecked ? new Rectangle(128, 256, 64, 64) : new Rectangle(192, 256, 64, 64),
                     Color.White, 0f, Vector2.Zero, 0.75f, SpriteEffects.None, 0.4f);
+                */
+                b.Draw(Game1.mouseCursors_1_6, new Vector2(bounds.X, bounds.Y),
+                                   isChecked ? new Rectangle(291, 253, 9, 9) : new Rectangle(273, 253, 9, 9), 
+                                   Color.White, 0f, Vector2.Zero, 5f, SpriteEffects.None, 0.4f);
 
                 Vector2 textPosition = new Vector2(bounds.X + 70, bounds.Y + (bounds.Height / 2) - (Game1.dialogueFont.MeasureString(label).Y / 2));
                 Utility.drawTextWithShadow(b, label, Game1.dialogueFont, textPosition, Game1.textColor);

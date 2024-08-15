@@ -17,11 +17,19 @@ namespace NpcTrackerMod
         public Dictionary<Point, (Color originalColor, Color currentColor, int priority)> tileStates = new Dictionary<Point, (Color, Color, int)>();
         private Dictionary<NPC, Point> npcPreviousPositions = new Dictionary<NPC, Point>();
         private Dictionary<Point, Color> npcTemporaryColors = new Dictionary<Point, Color>();
-
-        private Point NpcPathException = new Point();
-        private HashSet<Point> NpcNewPathRoute = new HashSet<Point>();
         private Dictionary<string, HashSet<Point>> NpcNewPathRoute2 = new Dictionary<string, HashSet<Point>>();
 
+        private Point NpcPathException = new Point();
+
+        private HashSet<Point> NpcNewPathRoute = new HashSet<Point>();
+        
+        // Список путей и локаций
+        private List<(String , List<Point>)> ListTupleLocAndPoint = new List<(String , List<Point>)>();
+        public List<string> NpcList = new List<string>(); // Список нпс в игре
+
+        private (String Location, List<Point> Coordinates) TupleLocationsPoint;
+
+        private string previousLocationName; // локация где находился игрок
 
         public bool Switchnpcpath = false;
 
@@ -31,7 +39,7 @@ namespace NpcTrackerMod
         public int NpcSelected = 0;
 
         
-        public List<string> NpcList = new List<string>(); // Список нпс в игре
+        
 
         // Создаем словарь для хранения маршрутов
         // Для меню
@@ -48,7 +56,6 @@ namespace NpcTrackerMod
             lineTexture.SetData(new[] { Color.White });
 
             Instance = this; // Инициализация экземпляра
-
             // Подписка на события
             helper.Events.Input.ButtonPressed += OnButtonPressed;
             helper.Events.Display.RenderedWorld += OnRenderedWorld;
@@ -198,91 +205,74 @@ namespace NpcTrackerMod
             Monitor.Log($"Номер нпс: {NpcSelected} Конкретика нпс: {NpcList[NpcSelected]}", LogLevel.Info);
 
         }
-
+       
         private void PathCreate(NPC npc) // Пред-установка пути нпс
         {
+            // Определение текущей позиции НПС
             Vector2 npcPosition = npc.Position;
             Vector2 npcBeforePosition = npc.positionBeforeEvent;
             int tileX = (int)Math.Floor((npcPosition.X + tileSize / 2) / tileSize);
             int tileY = (int)Math.Floor((npcPosition.Y + tileSize / 2) / tileSize);
-
-
             Point currentTile = new Point(tileX, tileY);
 
 
-            // Получаем точку назначения для текущего НПС
+            // Определение конечной точки для НПС
             Point end = npc.previousEndPoint;
             Vector2 endVector = new Vector2(end.X, end.Y);
-
             int EndTileX = (int)Math.Floor((endVector.X + tileSize / 2) / tileSize);
             int EndTileY = (int)Math.Floor((endVector.Y + tileSize / 2) / tileSize);
 
             Point endTile = new Point(EndTileX, EndTileY);
 
+            // Обновление предыдущей позиции НПС
             if (npcPreviousPositions.TryGetValue(npc, out var prevPos) && prevPos != currentTile)
             {
                 RestoreTileColor(prevPos);
             }
             npcPreviousPositions[npc] = currentTile;
 
-
-
+            // Получение и обработка пути НПС
             var path = GetNpcRoutePoints(npc);
-
             if (path != null)
             {
+                bool isCurrentLocation = Game1.player.currentLocation == npc.currentLocation;
+
                 foreach (var point in path)
                 {
-                    if (!Switchnpcpath)
-                    {
-                        //if (!NpcPathFilter(point)) DrawTileWithPriority(point, Color.Green, 2);
-                        //Monitor.Log($"{point} SWITCH: {Switchnpcpath}", LogLevel.Info);
-                    }
-
-                    //NpcPathFilter(point);
-                    //DrawTileWithPriority(point, Color.Green, 2);
-
-                    if (Game1.player.currentLocation == npc.currentLocation && !NpcPathFilter(point)) // сравнить название локации из пути нпс и название локации где находится сам нпс
+                    if (isCurrentLocation && !NpcPathFilter(point))
                     {
                         DrawTileWithPriority(point, Color.Green, 2);
                     }
-                    else
-                    {
-                        tileStates.Clear();
-                    }
-
-                    //if (!NpcPathFilter(point)) DrawTileWithPriority(point, Color.Green, 2);
-                    //DrawTileWithPriority(point, Color.Green, 2);                 
-
                 }
-                if (NpcNewPathRoute != null)
+
+                foreach (var NewPoints in ListTupleLocAndPoint.Where(np => Game1.player.currentLocation.Name == np.Item1))
                 {
-                    foreach (var Newpoint in NpcNewPathRoute)
+                    foreach (var pp in NewPoints.Item2)
                     {
-                        //if (Game1.player.currentLocation.Name == path.)
-                            //DrawTileWithPriority(Newpoint, Color.Green, 2);
+                        if (NpcNewPathRoute.Contains(pp))
+                        {
+                            DrawTileWithPriority(pp, Color.Green, 2);
+                        }
                     }
+                }
+
+                if (Game1.player.currentLocation.Name != previousLocationName)
+                {
+                    tileStates.Clear();
+                    previousLocationName = Game1.player.currentLocation.Name;
                 }
             }
 
-            if (Switchnpcpath == false)
+            if (!Switchnpcpath)
             {
-                Monitor.Log($"Закончилось---------------------------------------", LogLevel.Info);
-                if (NpcNewPathRoute.Any())
-                {
-                    /*
-                    foreach (var i in NpcNewPathRoute)
-                    {
-                        Monitor.Log($"Новый путь: {i}", LogLevel.Info);
-                    }
-                    */
-                }
+                Monitor.Log($"Закончилось---------------------------------------", LogLevel.Info);              
                 NpcNewPathRoute.Clear();
-                
-
             }
+
             NpcPathException = Point.Zero;
             Switchnpcpath = true;
+
+            // Отрисовка движения НПС
             DrawTileForNpcMovement(currentTile, Color.Blue, 1);
             //DrawTileWithPriority(endTile, Color.Blue, 1);
 
@@ -356,23 +346,35 @@ namespace NpcTrackerMod
                 //if (scheduleEntry.Value.targetLocationName == npc.currentLocation.Name.ToString()) // сравнить название локации из пути нпс и название локации где находится сам нпс
                 //if (scheduleEntry.Value.targetLocationName == "Sunroom")
                 //{ 
-                routePoints.AddRange(scheduleEntry.Value.route); // НИХУЯ НЕ РАБОТАЕТ
+                routePoints.AddRange(scheduleEntry.Value.route);
+                TupleLocationsPoint = (scheduleEntry.Value.targetLocationName, routePoints);
+                
                 //routePoints2[scheduleEntry.Value.targetLocationName].AddRange(scheduleEntry.Value.route);
 
                 //}
                 if (Switchnpcpath == false)
                 {
-                    this.Monitor.Log($"NPC: {npc.Name} ---------------------------------", LogLevel.Info);
-                    this.Monitor.Log($"KEY: {scheduleEntry.Key} Value: {scheduleEntry.Value.targetLocationName}", LogLevel.Info);
-                    foreach (var point in routePoints)
-                        this.Monitor.Log($"Route: {point}", LogLevel.Info);
-                    this.Monitor.Log($"Behavior: {scheduleEntry.Value.endOfRouteBehavior}", LogLevel.Info);
-                    this.Monitor.Log($"Tile: {scheduleEntry.Value.targetTile}", LogLevel.Info);
+                    ListTupleLocAndPoint.Add(TupleLocationsPoint);
+                    //this.Monitor.Log($"NPC: {npc.Name} ---------------------------------", LogLevel.Info);
+                    //this.Monitor.Log($"KEY: {scheduleEntry.Key} Value: {scheduleEntry.Value.targetLocationName}", LogLevel.Info);
+                    //foreach (var point in routePoints) this.Monitor.Log($"Route: {point}", LogLevel.Info);
+                    //this.Monitor.Log($"Behavior: {scheduleEntry.Value.endOfRouteBehavior}", LogLevel.Info);
+                    //this.Monitor.Log($"Tile: {scheduleEntry.Value.targetTile}", LogLevel.Info);
                     //this.Monitor.Log($"Schedule: {npc.getMasterScheduleRawData()}", LogLevel.Info); 
 
                 }
 
             }
+            /*
+            foreach (var point in ListTupleLocAndPoint)
+            {
+                foreach (var pp in point.Item2)
+                {
+                    this.Monitor.Log($"List. Location: {point.Item1}; Path: {pp}", LogLevel.Info);
+                }
+                //this.Monitor.Log($"List. Location: {point.Item1}; Path: {point.Item2}", LogLevel.Info);
+            }
+            */
             //Switchnpcpath = true;
             return routePoints;
             //return routePoints2[npc.currentLocation.Name];
