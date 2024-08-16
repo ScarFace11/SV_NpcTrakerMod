@@ -16,6 +16,7 @@ namespace NpcTrackerMod
         private readonly ClickableCheckbox DisplayGridCheckbox;
         private readonly ClickableCheckbox SwitchTargetLocationsCheckbox;
         private readonly ClickableCheckbox SwitchTargetNPCCheckbox;
+        private readonly ClickableCheckbox SwitchDrawContinuePathCheckbox;
 
         private ClickableTextureComponent exitButton;
 
@@ -35,7 +36,13 @@ namespace NpcTrackerMod
                 // Здесь можно добавить обработку ошибки или попытаться инициализировать объект
                 throw new System.Exception("NpcTrackerMod.Instance is null. Ensure it is initialized before creating TrackingMenu.");
             }
-
+            // Инициализация кнопки выхода
+            exitButton = new ClickableTextureComponent(
+                new Rectangle(xPositionOnScreen + width - 80, yPositionOnScreen + 30, 30, 30),
+                Game1.mouseCursors,
+                new Rectangle(337, 494, 12, 12),
+                4f
+            );
             // Инициализация чекбоксов
             DisplayGridCheckbox = new ClickableCheckbox(
                 new Rectangle(xPositionOnScreen + 30, yPositionOnScreen + 100, 300, 50),
@@ -52,14 +59,13 @@ namespace NpcTrackerMod
                 "Выбор нпс",
                 NpcTrackerMod.Instance.SwitchTargetNPC
             );
-
-            // Инициализация кнопки выхода
-            exitButton = new ClickableTextureComponent(
-                new Rectangle(xPositionOnScreen + width - 80, yPositionOnScreen + 30, 30, 30),
-                Game1.mouseCursors,
-                new Rectangle(337, 494, 12, 12),
-                4f
+            // Создание продолжения путя
+            SwitchDrawContinuePathCheckbox = new ClickableCheckbox(
+                new Rectangle(xPositionOnScreen + 30, yPositionOnScreen + 250, 300, 50),
+                "Создать продолжение пути",
+                NpcTrackerMod.Instance.SwitchDrawContinuePath
             );
+            
 
             // Инициализация кнопок с иконками стрелок
             leftArrowButton = new ClickableTextureComponent(
@@ -90,6 +96,7 @@ namespace NpcTrackerMod
             DisplayGridCheckbox.draw(b);
             SwitchTargetLocationsCheckbox.draw(b);
             SwitchTargetNPCCheckbox.draw(b);
+            SwitchDrawContinuePathCheckbox.draw(b);
 
             // Отрисовка кнопок со стрелками и текста между ними
             leftArrowButton.draw(b);
@@ -174,6 +181,12 @@ namespace NpcTrackerMod
 
                 displayText = "Npc Name";
                 
+            }
+            if (DisplayGridCheckbox.isChecked && SwitchDrawContinuePathCheckbox.containsPoint(x, y))
+            {
+                NpcTrackerMod.Instance.SwitchDrawContinuePath = !NpcTrackerMod.Instance.SwitchDrawContinuePath;
+                SwitchDrawContinuePathCheckbox.isChecked = NpcTrackerMod.Instance.SwitchDrawContinuePath;
+                NpcTrackerMod.Instance.tileStates.Clear();
             }
         }
 
