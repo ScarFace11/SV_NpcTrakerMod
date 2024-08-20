@@ -93,10 +93,10 @@ namespace NpcTrackerMod
             SpriteText.drawString(b, "NPC Tracker Menu", xPositionOnScreen + 100, yPositionOnScreen + 40);
 
             // Отрисовка чекбоксов
-            DisplayGridCheckbox.draw(b);
-            SwitchTargetLocationsCheckbox.draw(b);
-            SwitchTargetNPCCheckbox.draw(b);
-            SwitchDrawContinuePathCheckbox.draw(b);
+            DisplayGridCheckbox.draw(b, "Grid");
+            SwitchTargetLocationsCheckbox.draw(b, "Locations");
+            SwitchTargetNPCCheckbox.draw(b, "TargetNpc");
+            SwitchDrawContinuePathCheckbox.draw(b, "ContinuePath");
 
             // Отрисовка кнопок со стрелками и текста между ними
             leftArrowButton.draw(b);
@@ -153,20 +153,20 @@ namespace NpcTrackerMod
             }
 
             // Переключение чекбоксов
-            if (DisplayGridCheckbox.containsPoint(x, y))
+            if (DisplayGridCheckbox.containsPoint(x, y)) // отображение сетки
             {
                 NpcTrackerMod.Instance.DisplayGrid = !NpcTrackerMod.Instance.DisplayGrid;
                 DisplayGridCheckbox.isChecked = NpcTrackerMod.Instance.DisplayGrid;
             }
 
-            if (DisplayGridCheckbox.isChecked && SwitchTargetLocationsCheckbox.containsPoint(x, y))
+            if (DisplayGridCheckbox.isChecked && SwitchTargetLocationsCheckbox.containsPoint(x, y)) // смена локаций
             {
                 NpcTrackerMod.Instance.SwitchTargetLocations = !NpcTrackerMod.Instance.SwitchTargetLocations;
                 SwitchTargetLocationsCheckbox.isChecked = NpcTrackerMod.Instance.SwitchTargetLocations;
                 NpcTrackerMod.Instance.tileStates.Clear();
             }
 
-            if (DisplayGridCheckbox.isChecked && SwitchTargetNPCCheckbox.containsPoint(x, y))
+            if (DisplayGridCheckbox.isChecked && SwitchTargetNPCCheckbox.containsPoint(x, y)) // количество нпс
             {
                 NpcTrackerMod.Instance.SwitchTargetNPC = !NpcTrackerMod.Instance.SwitchTargetNPC;
                 SwitchTargetNPCCheckbox.isChecked = NpcTrackerMod.Instance.SwitchTargetNPC;
@@ -182,18 +182,12 @@ namespace NpcTrackerMod
                 displayText = "Npc Name";
                 
             }
-            if (DisplayGridCheckbox.isChecked && SwitchDrawContinuePathCheckbox.containsPoint(x, y))
+            if (DisplayGridCheckbox.isChecked && SwitchDrawContinuePathCheckbox.containsPoint(x, y)) // продолжение пути
             {
                 NpcTrackerMod.Instance.SwitchDrawContinuePath = !NpcTrackerMod.Instance.SwitchDrawContinuePath;
                 SwitchDrawContinuePathCheckbox.isChecked = NpcTrackerMod.Instance.SwitchDrawContinuePath;
                 NpcTrackerMod.Instance.tileStates.Clear();
             }
-        }
-
-
-        private void drawText(SpriteBatch b, string text, int x, int y, Color color)
-        {
-            SpriteText.drawString(b, text, x, y, color: color);
         }
 
         public class ClickableCheckbox : ClickableComponent
@@ -207,22 +201,35 @@ namespace NpcTrackerMod
                 this.label = label;
                 this.isChecked = isChecked;
             }
-            
-            public void draw(SpriteBatch b)
+            public void draw_Red_Button(SpriteBatch b)
             {
-                /*
-                b.Draw(Game1.mouseCursors, new Vector2(bounds.X, bounds.Y),
-                    isChecked ? new Rectangle(128, 256, 64, 64) : new Rectangle(192, 256, 64, 64),
-                    Color.White, 0f, Vector2.Zero, 0.75f, SpriteEffects.None, 0.4f);
-                */
-                b.Draw(Game1.mouseCursors_1_6, new Vector2(bounds.X, bounds.Y),
-                                   isChecked ? new Rectangle(291, 253, 9, 9) : new Rectangle(273, 253, 9, 9), 
-                                   Color.White, 0f, Vector2.Zero, 5f, SpriteEffects.None, 0.4f);
 
+            }
+            public void draw(SpriteBatch b, string BoxName)
+            {
+                if (NpcTrackerMod.Instance.DisplayGrid || BoxName == "Grid") // Если Чекбокс с сеткой true
+                {
+                    // Пустой квадрат и квадрат с галочкой
+                    b.Draw(Game1.mouseCursors_1_6, new Vector2(bounds.X, bounds.Y),
+                                   isChecked ? new Rectangle(291, 253, 9, 9) : new Rectangle(273, 253, 9, 9),
+                                   Color.White, 0f, Vector2.Zero, 5f, SpriteEffects.None, 0.4f);
+                }
+                else if (BoxName != "Grid")
+                {
+                    // квадрат с красным знаком
+                    b.Draw(Game1.mouseCursors, new Vector2(bounds.X, bounds.Y),
+                    isChecked ? new Rectangle(273, 253, 9, 9) : new Rectangle(192, 256, 64, 64),
+                    Color.White, 0f, Vector2.Zero, 0.75f, SpriteEffects.None, 0.4f);
+                }
+                
+
+                draw_Text(b);
+            }
+            public void draw_Text(SpriteBatch b)
+            {
                 Vector2 textPosition = new Vector2(bounds.X + 70, bounds.Y + (bounds.Height / 2) - (Game1.dialogueFont.MeasureString(label).Y / 2));
                 Utility.drawTextWithShadow(b, label, Game1.dialogueFont, textPosition, Game1.textColor);
             }
-
             public bool containsPoint(int x, int y)
             {
                 return bounds.Contains(x, y);
