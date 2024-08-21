@@ -16,7 +16,6 @@ namespace NpcTrackerMod
         private readonly ClickableCheckbox DisplayGridCheckbox;
         private readonly ClickableCheckbox SwitchTargetLocationsCheckbox;
         private readonly ClickableCheckbox SwitchTargetNPCCheckbox;
-        private readonly ClickableCheckbox SwitchDrawContinuePathCheckbox;
 
         private ClickableTextureComponent exitButton;
 
@@ -59,12 +58,6 @@ namespace NpcTrackerMod
                 "Выбор нпс",
                 NpcTrackerMod.Instance.SwitchTargetNPC
             );
-            // Создание продолжения путя
-            SwitchDrawContinuePathCheckbox = new ClickableCheckbox(
-                new Rectangle(xPositionOnScreen + 30, yPositionOnScreen + 250, 300, 50),
-                "Создать продолжение пути",
-                NpcTrackerMod.Instance.SwitchDrawContinuePath
-            );
             
 
             // Инициализация кнопок с иконками стрелок
@@ -96,7 +89,6 @@ namespace NpcTrackerMod
             DisplayGridCheckbox.draw(b, "Grid");
             SwitchTargetLocationsCheckbox.draw(b, "Locations");
             SwitchTargetNPCCheckbox.draw(b, "TargetNpc");
-            SwitchDrawContinuePathCheckbox.draw(b, "ContinuePath");
 
             // Отрисовка кнопок со стрелками и текста между ними
             leftArrowButton.draw(b);
@@ -157,6 +149,7 @@ namespace NpcTrackerMod
             {
                 NpcTrackerMod.Instance.DisplayGrid = !NpcTrackerMod.Instance.DisplayGrid;
                 DisplayGridCheckbox.isChecked = NpcTrackerMod.Instance.DisplayGrid;
+                NpcTrackerMod.Instance.SwitchGetNpcPath = true;
             }
 
             if (DisplayGridCheckbox.isChecked && SwitchTargetLocationsCheckbox.containsPoint(x, y)) // смена локаций
@@ -164,6 +157,7 @@ namespace NpcTrackerMod
                 NpcTrackerMod.Instance.SwitchTargetLocations = !NpcTrackerMod.Instance.SwitchTargetLocations;
                 SwitchTargetLocationsCheckbox.isChecked = NpcTrackerMod.Instance.SwitchTargetLocations;
                 NpcTrackerMod.Instance.tileStates.Clear();
+                NpcTrackerMod.Instance.SwitchGetNpcPath = true;
             }
 
             if (DisplayGridCheckbox.isChecked && SwitchTargetNPCCheckbox.containsPoint(x, y)) // количество нпс
@@ -172,6 +166,7 @@ namespace NpcTrackerMod
                 SwitchTargetNPCCheckbox.isChecked = NpcTrackerMod.Instance.SwitchTargetNPC;
                 NpcTrackerMod.Instance.tileStates.Clear();
                 NpcTrackerMod.Instance.NpcList.Clear();
+                NpcTrackerMod.Instance.SwitchGetNpcPath = true;
 
                 if (SwitchTargetNPCCheckbox.isChecked)
                 {
@@ -181,12 +176,6 @@ namespace NpcTrackerMod
 
                 displayText = "Npc Name";
                 
-            }
-            if (DisplayGridCheckbox.isChecked && SwitchDrawContinuePathCheckbox.containsPoint(x, y)) // продолжение пути
-            {
-                NpcTrackerMod.Instance.SwitchDrawContinuePath = !NpcTrackerMod.Instance.SwitchDrawContinuePath;
-                SwitchDrawContinuePathCheckbox.isChecked = NpcTrackerMod.Instance.SwitchDrawContinuePath;
-                NpcTrackerMod.Instance.tileStates.Clear();
             }
         }
 
