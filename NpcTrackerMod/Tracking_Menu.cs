@@ -95,9 +95,9 @@ namespace NpcTrackerMod
             rightArrowButton.draw(b);
             Utility.drawTextWithShadow(b, displayText, Game1.dialogueFont, new Vector2(xPositionOnScreen + 100, yPositionOnScreen + 315), Game1.textColor);
 
-            if (SwitchTargetNPCCheckbox.isChecked && NpcTrackerMod.Instance.NpcList.Any())
+            if (SwitchTargetNPCCheckbox.isChecked && NpcTrackerMod.Instance.TotalNpcList.NpcCurrentList.Any())
             {
-                displayText = NpcTrackerMod.Instance.NpcList[NpcTrackerMod.Instance.NpcSelected];
+                displayText = NpcTrackerMod.Instance.TotalNpcList.NpcCurrentList[NpcTrackerMod.Instance.NpcSelected];
             }
 
             exitButton.draw(b);
@@ -122,12 +122,13 @@ namespace NpcTrackerMod
             if (leftArrowButton.containsPoint(x, y) && SwitchTargetNPCCheckbox.isChecked)
             {
                 // Логика для нажатия на левую стрелку
-                if (NpcTrackerMod.Instance.NpcList.Any() && NpcTrackerMod.Instance.NpcSelected > 0)
+                if (NpcTrackerMod.Instance.TotalNpcList.NpcCurrentList.Any() && NpcTrackerMod.Instance.NpcSelected > 0)
                 {
                     NpcTrackerMod.Instance.NpcSelected--;
-                    displayText = NpcTrackerMod.Instance.NpcList[NpcTrackerMod.Instance.NpcSelected];
+                    displayText = NpcTrackerMod.Instance.TotalNpcList.NpcCurrentList[NpcTrackerMod.Instance.NpcSelected];
                     NpcTrackerMod.Instance.tileStates.Clear();
                     NpcTrackerMod.Instance.Switchnpcpath = false;
+                    NpcTrackerMod.Instance.SwitchGetNpcPath = true;
                 }
             }
 
@@ -135,12 +136,13 @@ namespace NpcTrackerMod
             if (rightArrowButton.containsPoint(x, y) && SwitchTargetNPCCheckbox.isChecked)
             {
                 // Логика для нажатия на правую стрелку
-                if (NpcTrackerMod.Instance.NpcList.Any() && NpcTrackerMod.Instance.NpcSelected < NpcTrackerMod.Instance.NpcList.Count() - 1)
+                if (NpcTrackerMod.Instance.TotalNpcList.NpcCurrentList.Any() && NpcTrackerMod.Instance.NpcSelected < NpcTrackerMod.Instance.TotalNpcList.NpcCurrentList.Count() - 1)
                 {
                     NpcTrackerMod.Instance.NpcSelected++;
-                    displayText = NpcTrackerMod.Instance.NpcList[NpcTrackerMod.Instance.NpcSelected];
+                    displayText = NpcTrackerMod.Instance.TotalNpcList.NpcCurrentList[NpcTrackerMod.Instance.NpcSelected];
                     NpcTrackerMod.Instance.tileStates.Clear();
                     NpcTrackerMod.Instance.Switchnpcpath = false;
+                    NpcTrackerMod.Instance.SwitchGetNpcPath = true;
                 }
             }
 
@@ -165,8 +167,9 @@ namespace NpcTrackerMod
                 NpcTrackerMod.Instance.SwitchTargetNPC = !NpcTrackerMod.Instance.SwitchTargetNPC;
                 SwitchTargetNPCCheckbox.isChecked = NpcTrackerMod.Instance.SwitchTargetNPC;
                 NpcTrackerMod.Instance.tileStates.Clear();
-                NpcTrackerMod.Instance.NpcList.Clear();
+                NpcTrackerMod.Instance.TotalNpcList.NpcCurrentList.Clear();
                 NpcTrackerMod.Instance.SwitchGetNpcPath = true;
+                NpcTrackerMod.Instance.SwitchListFull = false;
 
                 if (SwitchTargetNPCCheckbox.isChecked)
                 {

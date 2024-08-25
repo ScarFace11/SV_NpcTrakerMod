@@ -15,16 +15,19 @@ namespace NpcTrackerMod
 {
     public class Draw_Tiles
     {
-        private int tileSize;
-        private Texture2D lineTexture;
+        private NpcTrackerMod modInstance;
+        private readonly int _tileSize;
+        private readonly Texture2D _lineTexture;
 
-        public Draw_Tiles(int tileSize, Texture2D lineTexture)
+        public Draw_Tiles(NpcTrackerMod instance, int tileSize, Texture2D lineTexture)
         {
-            this.tileSize = tileSize;
-            this.lineTexture = lineTexture;
+            this.modInstance = instance;
+            _tileSize = tileSize;
+            _lineTexture = lineTexture;
         }
 
-        public void DrawGrid(SpriteBatch spriteBatch, Vector2 cameraOffset) // отрисовка сетки. исправить изменение разрешения при изменении размера интерфейса
+        // Отрисовка Grid сетки
+        public void DrawGrid(SpriteBatch spriteBatch, Vector2 cameraOffset)
         {
             var location = Game1.currentLocation;
 
@@ -32,22 +35,39 @@ namespace NpcTrackerMod
             {
                 for (int y = 0; y < location.Map.Layers[0].LayerHeight; y++)
                 {
-                    Vector2 tilePosition = new Vector2(x * tileSize, y * tileSize) - cameraOffset;
-
+                    Vector2 tilePosition = new Vector2(x * _tileSize, y * _tileSize) - cameraOffset;
                     DrawTileHighlight(spriteBatch, tilePosition, Color.Black);
                 }
             }
         }
 
+        // Отрисовка квадрата
         public void DrawTileHighlight(SpriteBatch spriteBatch, Vector2 tilePosition, Color color)
         {
-            Rectangle tileRect = new Rectangle((int)tilePosition.X, (int)tilePosition.Y, tileSize, tileSize);
+            Rectangle tileRect = new Rectangle((int)tilePosition.X, (int)tilePosition.Y, _tileSize, _tileSize);
 
-            spriteBatch.Draw(lineTexture, tileRect, new Color(color, 0.05f));
-            spriteBatch.Draw(lineTexture, new Rectangle(tileRect.Left, tileRect.Top, tileRect.Width, 1), color);
-            spriteBatch.Draw(lineTexture, new Rectangle(tileRect.Left, tileRect.Bottom - 1, tileRect.Width, 1), color);
-            spriteBatch.Draw(lineTexture, new Rectangle(tileRect.Left, tileRect.Top, 1, tileRect.Height), color);
-            spriteBatch.Draw(lineTexture, new Rectangle(tileRect.Right - 1, tileRect.Top, 1, tileRect.Height), color);
+            spriteBatch.Draw(_lineTexture, tileRect, new Color(color, 0.05f));
+            spriteBatch.Draw(_lineTexture, new Rectangle(tileRect.Left, tileRect.Top, tileRect.Width, 1), color);
+            spriteBatch.Draw(_lineTexture, new Rectangle(tileRect.Left, tileRect.Bottom - 1, tileRect.Width, 1), color);
+            spriteBatch.Draw(_lineTexture, new Rectangle(tileRect.Left, tileRect.Top, 1, tileRect.Height), color);
+            spriteBatch.Draw(_lineTexture, new Rectangle(tileRect.Right - 1, tileRect.Top, 1, tileRect.Height), color);
+        }
+        public void RestoreTileColor(Point tile) // Востановление цвета (хз)
+        {
+            modInstance.npcTemporaryColors.Remove(tile);
+        }
+        public void DrawTileWithPriority(Point tile, Color color, int priority) // выставление приоритета на отображение тайлов
+        {
+            if (!modInstance.tileStates.TryGetValue(tile, out var currentState) || currentState.priority < priority)
+            {
+                modInstance.tileStates[tile] = (currentState.originalColor, color, priority);
+            }
+        }
+
+        public void DrawTileForNpcMovement(Point tile, Color color, int priority) // Рисовка тайла под нпс
+        {
+            modInstance.npcTemporaryColors[tile] = color;
+            DrawTileWithPriority(tile, color, priority);
         }
     }
 

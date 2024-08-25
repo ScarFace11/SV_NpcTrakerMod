@@ -19,15 +19,13 @@ namespace NpcTrackerMod
         public bool SwitchTargetLocations { get; set; } // true - Все локации / false - Локация с игроком     
         public bool SwitchTargetNPC { get; set; } // true - выбор отедльного нпс / false - всех нпс
         public bool SwitchGetNpcPath { get; set; } = true;
-
+        public bool SwitchListFull { get; set; } = false;
         public Dictionary<Point, (Color originalColor, Color currentColor, int priority)> tileStates = new Dictionary<Point, (Color, Color, int)>();
-        private Dictionary<NPC, Point> npcPreviousPositions = new Dictionary<NPC, Point>();
-        private Dictionary<Point, Color> npcTemporaryColors = new Dictionary<Point, Color>();
+        public Dictionary<NPC, Point> npcPreviousPositions = new Dictionary<NPC, Point>();
+        public Dictionary<Point, Color> npcTemporaryColors = new Dictionary<Point, Color>();
 
 
         // Список путей и локаций
-
-        public List<string> NpcList = new List<string>(); // Список нпс в игре
 
         private List<(string, List<Point>)> path = new List<(string, List<Point>)>();
 
@@ -44,24 +42,46 @@ namespace NpcTrackerMod
 
         private Draw_Tiles DrawTiles;
 
-        private LocationsList Locations_List;
+        public NpcList TotalNpcList;
+
+        private NpcManager Npc_Manager;
+        public NpcTrackerMod()
+        {
+            TotalNpcList = new NpcList();
+            
+        }
 
         public override void Entry(IModHelper helper)
         {
-
             tileSize = Game1.tileSize;
             lineTexture = CreateLineTexture(Game1.graphics.GraphicsDevice);
 
             Instance = this; // Инициализация экземпляра
-            DrawTiles = new Draw_Tiles(tileSize, lineTexture); // Инициализация экземпляра Draw_Tiles
-            Locations_List = new LocationsList();
+            DrawTiles = new Draw_Tiles(Instance, tileSize, lineTexture);
+            Npc_Manager = new NpcManager(Instance);
 
             // Подписка на события
             helper.Events.Input.ButtonPressed += OnButtonPressed;            
             helper.Events.Display.RenderedWorld += OnRenderedWorld;
             helper.Events.GameLoop.DayStarted += OnDayStarted;
 
+            // Пример использования функции для проверки мода
+            if (IsModInstalled("FlashShifter.StardewValleyExpandedCP"))
+            {
+                Monitor.Log("Мод установлен!", LogLevel.Info);
+                // Действия, если мод установлен
+            }
+            else
+            {
+                Monitor.Log("Нет мода.", LogLevel.Info);
+                // Действия, если мод не установлен
+            }
             
+        }
+        // Проверка наличия определенного мода по его ID
+        private bool IsModInstalled(string modId)
+        {
+            return this.Helper.ModRegistry.IsLoaded(modId);
         }
         private static Texture2D CreateLineTexture(GraphicsDevice graphicsDevice)
         {
@@ -87,9 +107,12 @@ namespace NpcTrackerMod
                 .Select(warp => $"({warp.X}, {warp.Y})")
                 .ToList();
             Monitor.Log(string.Join(", ", warpCoordinates), LogLevel.Info);
+            
         }
         private void OnDayStarted(object sender, DayStartedEventArgs e)
         {
+            TotalNpcList.CreateTotalAndBlackList();
+
             tileStates.Clear();
             npcPreviousPositions.Clear();
             npcTemporaryColors.Clear();
@@ -117,7 +140,7 @@ namespace NpcTrackerMod
 
         private void DrawNpcPaths(SpriteBatch spriteBatch, Vector2 cameraOffset) // сбор инфы от нпс
         {
-            foreach (var npc in GetNpcsToTrack())
+            foreach (var npc in Npc_Manager.GetNpcsToTrack(SwitchTargetLocations, TotalNpcList.NpcTotalList))
             {
                 if (npc == null || string.IsNullOrWhiteSpace(npc.Name))
                 {
@@ -125,13 +148,16 @@ namespace NpcTrackerMod
                     continue;
                 }
 
+                
+
                 if (SwitchTargetNPC)
                 {
-                    if (!NpcList.Any())
+                    if (!SwitchListFull)
                     {
-                        AddNpcToList(npc);
+                        TotalNpcList.AddNpcToList(npc);
                     }
-                    if (npc.Name == NpcList[NpcSelected])
+
+                    if (npc.Name == TotalNpcList.NpcCurrentList[NpcSelected])
                     {
                         NpcCreatePath(npc);
                     }
@@ -142,71 +168,20 @@ namespace NpcTrackerMod
                 }
 
             }
-            
+
             foreach (var tile in tileStates)
             {
                 Vector2 tilePosition = new Vector2(tile.Key.X * tileSize, tile.Key.Y * tileSize) - cameraOffset;
                 var color = npcTemporaryColors.ContainsKey(tile.Key) ? npcTemporaryColors[tile.Key] : tile.Value.currentColor;
+                
                 DrawTiles.DrawTileHighlight(spriteBatch, tilePosition, color);
             }
-
+            SwitchListFull = true;
             SwitchGetNpcPath = false;
+            TotalNpcList.NpcCurrentList.Sort();
             DetectPlayerLocation();
         }
-        private IEnumerable<NPC> GetNpcsToTrack()
-        {
-            // Проверка для получения всех персонажей в текущей локации
-            if (!SwitchTargetLocations)
-                return Game1.currentLocation?.characters ?? Enumerable.Empty<NPC>();
 
-            // Проверка для получения всех персонажей во всех локациях
-            return Game1.locations
-                .Where(location => location?.characters != null)
-                .SelectMany(location => location.characters)
-                .Where(npc => npc != null); // Отфильтровываем возможные null значения
-        }
-
-
-
-        private void AddNpcToList(NPC npc) // Добавление в список нпс
-        {
-            int NpcCount = 0;
-            if (npc.Schedule == null || !npc.Schedule.Any())
-            {
-                Monitor.Log($"У {npc.Name} Нет пути.", LogLevel.Debug);
-            }
-            else
-            {
-                if (SwitchTargetLocations)
-                {
-                    foreach (var locateOnNpc in Game1.locations)
-                    {
-                        foreach (var CurentNPC in locateOnNpc.characters)
-                        {
-                            NpcList.Add(CurentNPC.Name);
-                            NpcCount++;
-                        }
-                    }
-                }
-                else
-                {
-                    foreach (var CurentNPC in Game1.currentLocation.characters)
-                    {
-                        NpcList.Add(CurentNPC.Name);
-                        NpcCount++;
-                    }
-                }
-                this.Monitor.Log($"Количество НПС: {NpcCount}", LogLevel.Debug);
-                foreach (var CurentNpcForList in NpcList)
-                {
-                    this.Monitor.Log($"{CurentNpcForList}", LogLevel.Debug);
-                }
-                Monitor.Log($"Номер нпс: {NpcSelected} Имя: {NpcList[NpcSelected]}", LogLevel.Info);
-            }
-
-
-        }
-       
         private void NpcCreatePath(NPC npc)
         {
             DrawNpcRoute(npc);
@@ -225,12 +200,12 @@ namespace NpcTrackerMod
             // Обновление предыдущей позиции НПС
             if (npcPreviousPositions.TryGetValue(npc, out var prevPos) && prevPos != currentTile)
             {
-                RestoreTileColor(prevPos);
+                DrawTiles.RestoreTileColor(prevPos);
             }
 
             npcPreviousPositions[npc] = currentTile;
             // Отрисовка движения НПС
-            DrawTileForNpcMovement(currentTile, Color.Blue, 1);
+            DrawTiles.DrawTileForNpcMovement(currentTile, Color.Blue, 1);
             
         }
 
@@ -243,28 +218,28 @@ namespace NpcTrackerMod
                     if (!SwitchTargetLocations && Game1.player.currentLocation.Name != segment.Item1)
                         continue;
 
-                    DrawTileWithPriority(point, Color.Green, 2);
+                    DrawTiles.DrawTileWithPriority(point, Color.Green, 2);
                 }
             }
         }
 
-        
+
         private void DrawNpcRoute(NPC npc) // Пред-установка пути нпс
         {
             // Получение и обработка пути НПС
             if (SwitchGetNpcPath)
             {
-                path = GetNpcRoutePoints(npc);
+                path = Npc_Manager.GetNpcRoutePoints(npc);
             }
-            
+
 
 
             if (path != null)
             {
                 bool isCurrentLocation = Game1.player.currentLocation == npc.currentLocation;
-                
-                if (!SwitchTargetLocations) 
-                { 
+
+                if (!SwitchTargetLocations)
+                {
                     foreach (var point in path)
                     {
                         foreach (var Cord in point.Item2)
@@ -272,13 +247,13 @@ namespace NpcTrackerMod
                             if (Game1.player.currentLocation.Name == point.Item1)
                             {
 
-                                DrawTileWithPriority(Cord, Color.Green, 2);
+                                DrawTiles.DrawTileWithPriority(Cord, Color.Green, 2);
                             }
                         }
                     }
                 }
 
-                
+
                 else
                 {
                     foreach (var GlobalPoints in path.Where(np => Game1.player.currentLocation.Name == np.Item1))
@@ -286,16 +261,16 @@ namespace NpcTrackerMod
                         foreach (var pp in GlobalPoints.Item2)
                         {
                             //if (!Switchnpcpath) this.Monitor.Log($"Loc: {GlobalPoints.Item1} Route: {pp}", LogLevel.Info);
-                            
-                            DrawTileWithPriority(pp, Color.Green, 2);
- 
+
+                            DrawTiles.DrawTileWithPriority(pp, Color.Green, 2);
+
                         }
                     }
-                }           
+                }
             }
             Switchnpcpath = true;
         }
-        
+
         private void DetectPlayerLocation()
         {
             if (Game1.player.currentLocation.Name != previousLocationName)
@@ -305,107 +280,7 @@ namespace NpcTrackerMod
                 SwitchGetNpcPath = true;
             }
         }
-        private void DrawTileWithPriority(Point tile, Color color, int priority) // выставление приоритета на отображение тайлов
-        {
-            if (!tileStates.TryGetValue(tile, out var currentState) || currentState.priority < priority)
-            {
-                tileStates[tile] = (currentState.originalColor, color, priority);
-            }
-        }
-
-        private void DrawTileForNpcMovement(Point tile, Color color, int priority) // Рисовка тайла под нпс
-        {
-            npcTemporaryColors[tile] = color;
-            DrawTileWithPriority(tile, color, priority);
-        }
-
-        private void RestoreTileColor(Point tile) // Востановление цвета (хз)
-        {
-            npcTemporaryColors.Remove(tile);
-        }
-        private List<(string, List<Point>)> GetNpcRoutePoints(NPC npc) // Сбор данных об пути от нпс
-        {
-            Monitor.Log("Создание пути!", LogLevel.Debug);
-            // Проверяем, есть ли у NPC расписание
-            if (npc.Schedule == null || !npc.Schedule.Any())
-            {
-                //Monitor.Log($"NPC {npc.Name} has no schedule.", LogLevel.Warn);
-                return new List<(string, List<Point>)>();
-            }
-
-            var routePoints = new List<Point>();
-
-            foreach (var scheduleEntry in npc.Schedule)
-            {
-                routePoints.AddRange(scheduleEntry.Value.route);
-
-                if (!Switchnpcpath)
-                {                  
-                    //this.Monitor.Log($"NPC: {npc.Name} | KEY: {scheduleEntry.Key} | Value: {scheduleEntry.Value.targetLocationName}", LogLevel.Info);
-                    //foreach (var point in routePoints) this.Monitor.Log($"Route: {point}", LogLevel.Info);
-                }
-            }
-            return NpcPathFilter(npc.currentLocation.Name, routePoints);
-        }
         
-        public List<(string, List<Point>)> NpcPathFilter(string LocationName, List<Point> ListPoints) // Отделение пути передвижение, от пути после телепорта
-        {
-            if (string.IsNullOrEmpty(LocationName) || ListPoints == null || !ListPoints.Any())
-            {
-                Monitor.Log("Invalid input to NpcPathFilter.", LogLevel.Warn);
-                return null;
-            }
-
-            var CurrentLocationPath = LocationName; // текущая локация
-
-            var CurrentCoordinatePath = new Point(); // текущая координата, где находится NPC
-
-            var NpcCurrentPath = new List<Point>(); // часть маршрута
-            var TotalNpcPath = new List<(string, List<Point>)>(); // общий маршрут
-            
-            foreach (var point in ListPoints)
-            {
-                if (CurrentCoordinatePath == Point.Zero)
-                {
-                    CurrentCoordinatePath = point; // устанавливаем стартовую координату
-                    NpcCurrentPath.Add(CurrentCoordinatePath);
-                    continue;
-                }
-
-                bool isAdjacent = Math.Abs(point.X - CurrentCoordinatePath.X) <= 1 && 
-                                  Math.Abs(point.Y - CurrentCoordinatePath.Y) <= 1; // true - если нпс идёт / fakse - если тпхнулся
-                //Monitor.Log($"location: {CurrentLocationPath}, Предыдущая точка: {CurrentCoordinatePath} Некст точка: {point}", LogLevel.Info);
-                if (isAdjacent)
-                {
-                    // Добавляем точку в текущий маршрут
-                    NpcCurrentPath.Add(point);
-                    CurrentCoordinatePath = point;
-                }
-                else
-                {
-                    // Сегмент пути завершён, добавляем его в общий маршрут
-
-                    TotalNpcPath.Add((CurrentLocationPath, NpcCurrentPath));
-                        
-                    NpcCurrentPath = new List<Point>(); // очищаем текущий маршрут
-                    
-                    // Обновляем текущую локацию
-                    
-                    CurrentLocationPath = Locations_List.GetTeleportLocation(CurrentLocationPath, CurrentCoordinatePath);
-                    
-                    // Начинаем новый сегмент маршрута
-                    //NpcCurrentPath.Add(point);
-                    CurrentCoordinatePath = point;
-                }
-            }
-            // Добавляем последний сегмент маршрута
-            if (NpcCurrentPath.Count > 0)
-            {
-                TotalNpcPath.Add((CurrentLocationPath, NpcCurrentPath));
-            }
-            return TotalNpcPath;
-
-        }
 
     }
 }
