@@ -25,6 +25,12 @@ namespace NpcTrackerMod
         public Dictionary<string, List<(Point, string)>> LocationsTeleportCord { get; }
         List<(Point, string)> TeleportedCord = new List<(Point, string)>();
 
+        /// <summary>
+        /// Возвращает локацию куда тепнится нпс
+        /// </summary>
+        /// <param name="currentLocation"> локация где находится нпс</param>
+        /// <param name="npcPosition"> XY тайла нпс</param>
+        /// <returns>Название локации</returns>
         public string GetTeleportLocation(string currentLocation, Point npcPosition)
         {
             if (LocationsTeleportCord.TryGetValue(currentLocation, out var teleportData))
@@ -42,8 +48,11 @@ namespace NpcTrackerMod
             //Console.WriteLine($"Teleportation not possible for location: {currentLocation}, position: {npcPosition}");
             return "Null";
         }
-        public void Locations()
+        /// <summary> Получает список всех игровых локаций </summary>
+        public void SetLocations()
         {
+            LocationsTeleportCord.Clear();
+
             var locations = Game1.locations;
             foreach (var loccord in locations)
             {
@@ -58,14 +67,7 @@ namespace NpcTrackerMod
                 }
                 LocationsTeleportCord.Add(loccord.Name, new List<(Point, string)>(TeleportedCord)); // Создаем новый список, чтобы избежать ссылок на один и тот же объект
             }
-            foreach (var location in LocationsTeleportCord)
-            {
-                modInstance.Monitor.Log($"Все локи: {location.Key}", LogLevel.Debug); // Выводим только ключ, так как словарь содержит пары имя локации и список точек
-                foreach (var lc in location.Value)
-                {
-                    modInstance.Monitor.Log($"{lc.Item1} {lc.Item2}", LogLevel.Debug); // Выводим только ключ, так как словарь содержит пары имя локации и список точек
-                }
-            }
+            modInstance.LocationSet = true;
         }
 
     }

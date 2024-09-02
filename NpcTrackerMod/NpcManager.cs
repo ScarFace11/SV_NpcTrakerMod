@@ -15,7 +15,7 @@ namespace NpcTrackerMod
     {
         private NpcTrackerMod modInstance;
 
-        
+        private string LastLocationName; 
         public NpcManager(NpcTrackerMod instance)
         {
             this.modInstance = instance;
@@ -24,7 +24,9 @@ namespace NpcTrackerMod
         {
             // Проверка для получения всех персонажей в текущей локации
             if (!trackAllLocations)
-                return Game1.currentLocation?.characters ?? Enumerable.Empty<NPC>().Where(npc => NpcList.Contains(npc.Name));
+                return Game1.currentLocation?.characters
+                .Where(npc => NpcList.Contains(npc.Name))
+                ?? Enumerable.Empty<NPC>();
 
             // Проверка для получения всех персонажей во всех локациях
             return Game1.locations
@@ -37,42 +39,16 @@ namespace NpcTrackerMod
             // Проверяем, есть ли у NPC расписание
             if (npc.Schedule == null || !npc.Schedule.Any())
             {
-                Console.WriteLine($"NPC {npc.Name} has no schedule.", LogLevel.Warn);
+                modInstance.Monitor.Log($"NPC {npc.Name} has no schedule.", LogLevel.Warn);
                 return new List<List<(string, List<Point>)>>();
             }
 
-            var routePoints = new List<Point>();  // Получаем точки маршрута
 
-            var PathList = new List<List<(string, List<Point>)>>();
             var totalNpcPath = new List<(string, List<Point>)>();
+            var PathList = new List<List<(string, List<Point>)>>();           
             
             if (AllRoutes)
             {
-                /*
-                modInstance.Monitor.Log($"Общий путь", LogLevel.Debug);
-                // Получаем все возможные маршруты из всех расписаний
-                foreach (var schedule in npc.getMasterScheduleRawData())
-                {
-                    //Console.WriteLine($"1/ Key: {la.Key} | Value: {la.Value}", LogLevel.Debug);
-                    try
-                    {
-                        
-                        foreach (var path in npc.parseMasterSchedule(schedule.Key, schedule.Value))
-                        {
-                            routePoints.AddRange(path.Value.route);
-                            totalNpcPath.AddRange(NpcPathFilter(npc.currentLocation.Name, routePoints));
-                            //PathList.Add(totalNpcPath);
-                        }
-
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Ошибка: {ex}");
-                    }
-
-                    //Console.WriteLine($"{npc.parseMasterSchedule(npc.ScheduleKey, la)}");
-                }
-                */
                 try
                 {
                     foreach (var schedule in npc.getMasterScheduleRawData())
@@ -93,17 +69,19 @@ namespace NpcTrackerMod
                         }
 
                         //modInstance.Monitor.Log($"master: {npc.getMasterScheduleEntry(schedule.Key)}", LogLevel.Debug);
+                        //modInstance.Monitor.Log($"schedule: {schedule.Key} {schedule.Value}", LogLevel.Debug);
                         try
                         {
                             foreach (var path in npc.parseMasterSchedule(schedule.Key, rawData))
                             {
-                                //modInstance.Monitor.Log($"key: {path.Key}", LogLevel.Debug);
-                                foreach (var abc in path.Value.route)
-                                {
-                                    //modInstance.Monitor.Log($"route: {abc}", LogLevel.Debug);
-                                    routePoints.Add(abc);
-                                }
+                                totalNpcPath.AddRange(NpcPathFilter(npc.currentLocation.Name, path.Value.route));
+
                             }
+                            //foreach (var path in totalNpcPath)
+                            //{
+                            //    modInstance.Monitor.Log($"totalpath: {path.Item1} {path.Item2}", LogLevel.Debug);
+
+                            //}
                         }
                         catch (Exception ex)
                         {
@@ -111,11 +89,9 @@ namespace NpcTrackerMod
                             // Продолжить выполнение цикла для других расписаний
                             continue;
                         }
-                        totalNpcPath.AddRange(NpcPathFilter(npc.currentLocation.Name, routePoints));
-                        PathList.Add(totalNpcPath);
-                    }
-                    
 
+                        PathList.Add(totalNpcPath);
+                    }                    
                  }
                 catch (Exception ex)
                 {
@@ -126,7 +102,7 @@ namespace NpcTrackerMod
             {
                 foreach (var scheduleEntry in npc.Schedule)
                 {
-                    routePoints.AddRange(scheduleEntry.Value.route);
+                    totalNpcPath.AddRange(NpcPathFilter(npc.currentLocation.Name, scheduleEntry.Value.route));
                     if (!modInstance.Switchnpcpath)
                     {
                         //this.Monitor.Log($"NPC: {npc.Name} | KEY: {scheduleEntry.Key} | Value: {scheduleEntry.Value.targetLocationName}", LogLevel.Info);
@@ -134,57 +110,42 @@ namespace NpcTrackerMod
                         
                     }
                 }
-                totalNpcPath.AddRange(NpcPathFilter(npc.currentLocation.Name, routePoints));
-                PathList.Add(totalNpcPath);
+                PathList.Add(totalNpcPath); // Позже можно упростить убрать ПачЛист и оставиьв только тотал
             }
             
             modInstance.Monitor.Log($"Totalcount: {totalNpcPath.Count()}", LogLevel.Debug);
             modInstance.Monitor.Log($"PathListcount: {PathList.Count()}", LogLevel.Debug);
 
-            foreach (var item in routePoints)
+            foreach(var path in totalNpcPath)
             {
-                //modInstance.Monitor.Log($"route {item}", LogLevel.Debug);
-            }
-
-            foreach (var path in PathList)
-            {
-
-                //Console.WriteLine($"Path1. {path[0].Item1}", LogLevel.Debug);
-                foreach (var point in path)
+                //modInstance.Monitor.Log($"Name. {path.Item1}", LogLevel.Info);
+                foreach (var route in path.Item2)
                 {
-                    //modInstance.Monitor.Log($"Path2. {point.Item1}", LogLevel.Debug);
-                    foreach (var da in point.Item2)
-                    {
-                        //modInstance.Monitor.Log($"Path3. {point.Item1} {da}", LogLevel.Debug);
-                    }
+                    //modInstance.Monitor.Log($"Route {route}", LogLevel.Debug);
                 }
             }
-            foreach (var path in totalNpcPath)
-            {
-                
-                foreach (var point in path.Item2)
-                {
-                    //modInstance.Monitor.Log($"Total. {path.Item1} {point}", LogLevel.Debug);
-                }
-                
-            }       
+            
+    
 
             modInstance.Monitor.Log($"-------------", LogLevel.Debug);
+            LastLocationName = null;
             return PathList;
         }
         
-        public List<(string, List<Point>)> NpcPathFilter(string LocationName, List<Point> ListPoints) // Отделение пути передвижение, от пути после телепорта
+        public List<(string, List<Point>)> NpcPathFilter(string LocationName, Stack<Point> ListPoints) // Отделение пути передвижение, от пути после телепорта
         {
+
             if (string.IsNullOrEmpty(LocationName) || ListPoints == null || !ListPoints.Any())
             {
-                Console.WriteLine("Invalid input to NpcPathFilter.", LogLevel.Warn);
+                modInstance.Monitor.Log("Invalid input to NpcPathFilter.", LogLevel.Warn);
                 return new List<(string, List<Point>)>();
             }
-
-            var CurrentLocationPath = LocationName; // текущая локация
-
-            var CurrentCoordinatePath = new Point(); // текущая координата, где находится NPC
-
+            if (LastLocationName == null)
+            {
+                LastLocationName = LocationName;
+            }
+            //var LastLocationName = LocationName; // текущая локация
+            var CurrentCoordinatePath = Point.Zero; // текущая координата, где находится NPC
             var NpcCurrentPath = new List<Point>(); // часть маршрута
             var TotalNpcPath = new List<(string, List<Point>)>(); // общий маршрут
 
@@ -199,7 +160,7 @@ namespace NpcTrackerMod
 
                 bool isAdjacent = Math.Abs(point.X - CurrentCoordinatePath.X) <= 1 &&
                                   Math.Abs(point.Y - CurrentCoordinatePath.Y) <= 1; // true - если нпс идёт / fakse - если тпхнулся
-                //modInstance.Monitor.Log($"location: {CurrentLocationPath}, Предыдущая точка: {CurrentCoordinatePath} Некст точка: {point}", LogLevel.Info);
+                //modInstance.Monitor.Log($"location: {LastLocationName}, Предыдущая точка: {CurrentCoordinatePath} Некст точка: {point}", LogLevel.Info);
                 if (isAdjacent)
                 {
                     // Добавляем точку в текущий маршрут
@@ -210,13 +171,13 @@ namespace NpcTrackerMod
                 {
                     // Сегмент пути завершён, добавляем его в общий маршрут
 
-                    TotalNpcPath.Add((CurrentLocationPath, NpcCurrentPath));
+                    TotalNpcPath.Add((LastLocationName, NpcCurrentPath));
 
                     NpcCurrentPath = new List<Point>(); // очищаем текущий маршрут
 
                     // Обновляем текущую локацию
 
-                    CurrentLocationPath = modInstance.LocationsList.GetTeleportLocation(CurrentLocationPath, CurrentCoordinatePath);
+                    LastLocationName = modInstance.LocationsList.GetTeleportLocation(LastLocationName, CurrentCoordinatePath);
 
                     // Начинаем новый сегмент маршрута
                     //NpcCurrentPath.Add(point);
@@ -227,7 +188,7 @@ namespace NpcTrackerMod
             // Добавляем последний сегмент маршрута
             if (NpcCurrentPath.Count > 0)
             {
-                TotalNpcPath.Add((CurrentLocationPath, NpcCurrentPath));
+                TotalNpcPath.Add((LastLocationName, NpcCurrentPath));
             }
             return TotalNpcPath;
 

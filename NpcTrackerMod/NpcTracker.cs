@@ -20,8 +20,8 @@ namespace NpcTrackerMod
         public bool SwitchTargetNPC { get; set; } // true - выбор отедльного нпс / false - всех нпс
         public bool SwitchGetNpcPath { get; set; } = true; //
         public bool SwitchListFull { get; set; } = false;
-        
-        
+        public bool LocationSet = false;
+
         public Dictionary<Point, (Color originalColor, Color currentColor, int priority)> tileStates = new Dictionary<Point, (Color, Color, int)>();
         public Dictionary<NPC, Point> npcPreviousPositions = new Dictionary<NPC, Point>();
         public Dictionary<Point, Color> npcTemporaryColors = new Dictionary<Point, Color>();
@@ -35,6 +35,7 @@ namespace NpcTrackerMod
         private Texture2D lineTexture;
         private int tileSize;
         public int NpcCount = 0;
+        
         public int NpcSelected { get; set; }
         public Draw_Tiles DrawTiles;
         public NpcList TotalNpcList;
@@ -62,6 +63,7 @@ namespace NpcTrackerMod
             helper.Events.Display.RenderedWorld += ModEntry.OnRenderedWorld;
             helper.Events.GameLoop.DayStarted += ModEntry.OnDayStarted;
             helper.Events.GameLoop.DayEnding += ModEntry.OnDayEnding;
+            
             //helper.Events.GameLoop.UpdateTicked += ModEntry.OnUpdateTicked;
             // Пример использования функции для проверки мода
             if (ModEntry.IsModInstalled("FlashShifter.StardewValleyExpandedCP"))
@@ -162,6 +164,7 @@ namespace NpcTrackerMod
             {
                 path = Npc_Manager.GetNpcRoutePoints(npc, showAllRoutes);
             }
+            
             if (path != null)
             {
                 bool isCurrentLocation = Game1.player.currentLocation == npc.currentLocation;
@@ -190,31 +193,17 @@ namespace NpcTrackerMod
                             // пофиксить двойное отправление и ощбий путь
                         foreach (var GlobalPoints in PathList.Where(np => Game1.player.currentLocation.Name == np.Item1))
                         {
-                            if (SwitchGetNpcPath)
-                            {
-                                try
-                                {
-                                    Monitor.Log($"{PathList[0]}", LogLevel.Debug);
-                                }
-                                catch (Exception ex)
-                                {
-                                    Monitor.Log($" warning : {ex}", LogLevel.Debug);
-                                }
-                            }
                             foreach (var pp in GlobalPoints.Item2)
                             {
                                 //if (!Switchnpcpath) this.Monitor.Log($"Loc: {GlobalPoints.Item1} Route: {pp}", LogLevel.Info);
 
                                 DrawTiles.DrawTileWithPriority(pp, Color.Green, 2);
-
                             }
-                        }
-                        
-                        
-                    }
-                    
+                        }                       
+                    }                   
                 }
             }
+            
             Switchnpcpath = true;
         }
 

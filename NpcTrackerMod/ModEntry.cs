@@ -10,8 +10,7 @@ using StardewModdingAPI;
 using StardewValley;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using System.Collections.Generic;
-using System.Linq;
+
 
 namespace NpcTrackerMod
 {
@@ -26,6 +25,7 @@ namespace NpcTrackerMod
         }
         public void OnButtonPressed(object sender, ButtonPressedEventArgs e)
         {
+            
             if (e.Button == SButton.G && Game1.activeClickableMenu == null) // Вызов меню
             {
                 Game1.activeClickableMenu = new TrackingMenu();
@@ -59,7 +59,7 @@ namespace NpcTrackerMod
                 modInstance.NpcCount = NpcCount;
             }
 
-            modInstance.LocationsList.Locations();
+            if (!modInstance.LocationSet) modInstance.LocationsList.SetLocations();
 
             modInstance.tileStates.Clear();
             modInstance.npcPreviousPositions.Clear();
