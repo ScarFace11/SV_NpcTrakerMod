@@ -48,6 +48,7 @@
   <ItemGroup>
     <Compile Include="Draw_Tiles.cs" />
     <Compile Include="LocationsList.cs" />
+    <Compile Include="ModEntry.cs" />
     <Compile Include="NpcList.cs" />
     <Compile Include="NpcManager.cs" />
     <Compile Include="NpcTracker.cs" />

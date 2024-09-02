@@ -151,7 +151,7 @@ namespace NpcTrackerMod
             {
                 NpcTrackerMod.Instance.DisplayGrid = !NpcTrackerMod.Instance.DisplayGrid;
                 DisplayGridCheckbox.isChecked = NpcTrackerMod.Instance.DisplayGrid;
-                NpcTrackerMod.Instance.SwitchGetNpcPath = true;
+                //NpcTrackerMod.Instance.SwitchGetNpcPath = true;
             }
 
             if (DisplayGridCheckbox.isChecked && SwitchTargetLocationsCheckbox.containsPoint(x, y)) // смена локаций
@@ -203,8 +203,8 @@ namespace NpcTrackerMod
                 {
                     // Пустой квадрат и квадрат с галочкой
                     b.Draw(Game1.mouseCursors_1_6, new Vector2(bounds.X, bounds.Y),
-                                   isChecked ? new Rectangle(291, 253, 9, 9) : new Rectangle(273, 253, 9, 9),
-                                   Color.White, 0f, Vector2.Zero, 5f, SpriteEffects.None, 0.4f);
+                    isChecked ? new Rectangle(291, 253, 9, 9) : new Rectangle(273, 253, 9, 9),
+                    Color.White, 0f, Vector2.Zero, 5f, SpriteEffects.None, 0.4f);
                 }
                 else if (BoxName != "Grid")
                 {
