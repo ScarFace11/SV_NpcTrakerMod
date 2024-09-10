@@ -55,8 +55,21 @@ namespace NpcTrackerMod
                     {
                         var rawData = schedule.Value;
 
+                        //modInstance.Monitor.Log($"Processing schedule key: {schedule.Key} with data: {rawData}", LogLevel.Debug);
+
+
                         // Простая проверка на валидность данных
-                        if (schedule.Key == "CommunityCenter_Replacement")
+                        if (schedule.Key == null || !schedule.Key.Any())
+                        {
+                            modInstance.Monitor.Log("ListPoints is null or empty", LogLevel.Warn);
+                            return new List<List<(string, List<Point>)>>();
+                        }
+                        if (rawData.Contains("MAIL") || rawData.Contains("GOTO") || rawData.Contains("NO_SCHEDULE"))
+                        {
+                            modInstance.Monitor.Log($"Skipping problematic schedule key: {schedule.Key}", LogLevel.Warn);
+                            continue;
+                        }
+                        if (schedule.Key == "CommunityCenter_Replacement" || schedule.Key == "JojaMart_Replacement")
                         {
                             modInstance.Monitor.Log($"Skipping known problematic schedule '{schedule.Key}' for NPC '{npc.Name}'", LogLevel.Warn);
                             continue;
@@ -68,20 +81,12 @@ namespace NpcTrackerMod
                             continue;
                         }
 
-                        //modInstance.Monitor.Log($"master: {npc.getMasterScheduleEntry(schedule.Key)}", LogLevel.Debug);
-                        //modInstance.Monitor.Log($"schedule: {schedule.Key} {schedule.Value}", LogLevel.Debug);
                         try
                         {
                             foreach (var path in npc.parseMasterSchedule(schedule.Key, rawData))
                             {
                                 totalNpcPath.AddRange(NpcPathFilter(npc.currentLocation.Name, path.Value.route));
-
                             }
-                            //foreach (var path in totalNpcPath)
-                            //{
-                            //    modInstance.Monitor.Log($"totalpath: {path.Item1} {path.Item2}", LogLevel.Debug);
-
-                            //}
                         }
                         catch (Exception ex)
                         {
@@ -89,10 +94,8 @@ namespace NpcTrackerMod
                             // Продолжить выполнение цикла для других расписаний
                             continue;
                         }
-
-                        PathList.Add(totalNpcPath);
                     }                    
-                 }
+                }
                 catch (Exception ex)
                 {
                     modInstance.Monitor.Log($"Unexpected error: {ex.Message}", LogLevel.Error);
@@ -103,31 +106,58 @@ namespace NpcTrackerMod
                 foreach (var scheduleEntry in npc.Schedule)
                 {
                     totalNpcPath.AddRange(NpcPathFilter(npc.currentLocation.Name, scheduleEntry.Value.route));
-                    if (!modInstance.Switchnpcpath)
-                    {
-                        //this.Monitor.Log($"NPC: {npc.Name} | KEY: {scheduleEntry.Key} | Value: {scheduleEntry.Value.targetLocationName}", LogLevel.Info);
-                        //foreach (var point in routePoints) this.Monitor.Log($"Route: {point}", LogLevel.Info);
-                        
-                    }
+                    //modInstance.TotalNpcList.AddNpcPath(npc.Name, npc.currentLocation.Name, totalNpcPath.SelectMany(p => p.Item2).ToList());
+
+                    
+                    // Добавляем полученные пути в NpcTotalToDayPath для определенного NPC
                 }
-                PathList.Add(totalNpcPath); // Позже можно упростить убрать ПачЛист и оставиьв только тотал
+                modInstance.TotalNpcList.AddNpcPath(npc.Name, totalNpcPath);                
             }
-            
+            //PathList.Add(totalNpcPath); 
+            foreach (var PathsItems in modInstance.TotalNpcList.NpcTotalToDayPath)
+            {
+                PathList.Add(PathsItems.Value);
+            }
+            /*
             modInstance.Monitor.Log($"Totalcount: {totalNpcPath.Count()}", LogLevel.Debug);
             modInstance.Monitor.Log($"PathListcount: {PathList.Count()}", LogLevel.Debug);
 
-            foreach(var path in totalNpcPath)
+
+            modInstance.Monitor.Log($"TotalPathCount: {modInstance.TotalNpcList.NpcTotalToDayPath.Count()}", LogLevel.Debug);
+
+            
+            modInstance.Monitor.Log($"-----Некст--------", LogLevel.Debug);
+
+            foreach (var lopat in modInstance.TotalNpcList.NpcTotalToDayPath)
             {
-                //modInstance.Monitor.Log($"Name. {path.Item1}", LogLevel.Info);
-                foreach (var route in path.Item2)
+                modInstance.Monitor.Log($"ToDay НПС: {lopat.Key}", LogLevel.Debug);
+                foreach (var lopata in lopat.Value)
                 {
-                    //modInstance.Monitor.Log($"Route {route}", LogLevel.Debug);
+                    modInstance.Monitor.Log($"ToDay Локация: {lopata.Item1}", LogLevel.Debug);
                 }
             }
-            
-    
 
+            modInstance.Monitor.Log($"-----Некст2--------", LogLevel.Debug);
+
+            foreach (var lopat in PathList)
+            {
+                foreach (var lopat2 in lopat)
+                {
+
+                    modInstance.Monitor.Log($"Total Локация: {lopat2.Item1}", LogLevel.Debug);
+                }
+
+            }
+            modInstance.Monitor.Log($"-----Некст3--------", LogLevel.Debug);
+
+            foreach (var lopat in totalNpcPath)
+            {
+                modInstance.Monitor.Log($"Total Локация: {lopat.Item1}", LogLevel.Debug);
+                
+            }
             modInstance.Monitor.Log($"-------------", LogLevel.Debug);
+            */
+
             LastLocationName = null;
             return PathList;
         }

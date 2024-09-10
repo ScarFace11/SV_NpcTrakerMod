@@ -151,6 +151,7 @@ namespace NpcTrackerMod
             {
                 NpcTrackerMod.Instance.DisplayGrid = !NpcTrackerMod.Instance.DisplayGrid;
                 DisplayGridCheckbox.isChecked = NpcTrackerMod.Instance.DisplayGrid;
+                NpcTrackerMod.Instance.TotalNpcList.NpcTotalToDayPath.Clear();
                 //NpcTrackerMod.Instance.SwitchGetNpcPath = true;
             }
 
@@ -160,6 +161,7 @@ namespace NpcTrackerMod
                 SwitchTargetLocationsCheckbox.isChecked = NpcTrackerMod.Instance.SwitchTargetLocations;
                 NpcTrackerMod.Instance.tileStates.Clear();
                 NpcTrackerMod.Instance.SwitchGetNpcPath = true;
+                NpcTrackerMod.Instance.TotalNpcList.NpcTotalToDayPath.Clear();
             }
 
             if (DisplayGridCheckbox.isChecked && SwitchTargetNPCCheckbox.containsPoint(x, y)) // количество нпс

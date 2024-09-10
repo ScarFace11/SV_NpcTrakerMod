@@ -32,7 +32,7 @@ namespace NpcTrackerMod
             }
             if (e.Button == SButton.Z)
             {
-                LogCurrentLocationWarps();
+                //LogCurrentLocationWarps();              
                 //AllGameLoaction();
             }
             if (e.Button == SButton.X) // Допустим, X - это ваша кнопка для отображения всех маршрутов

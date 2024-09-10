@@ -42,10 +42,7 @@ namespace NpcTrackerMod
         private NpcManager Npc_Manager;
         public ModEntry ModEntry;
         public LocationsList LocationsList;
-        public NpcTrackerMod()
-        {
-            TotalNpcList = new NpcList();          
-        }
+
 
         public override void Entry(IModHelper helper)
         {
@@ -57,12 +54,14 @@ namespace NpcTrackerMod
             Npc_Manager = new NpcManager(Instance);
             ModEntry = new ModEntry(Instance);
             LocationsList = new LocationsList(Instance);
+            TotalNpcList = new NpcList(Instance);
 
             // Подписка на события
             helper.Events.Input.ButtonPressed += ModEntry.OnButtonPressed;            
             helper.Events.Display.RenderedWorld += ModEntry.OnRenderedWorld;
             helper.Events.GameLoop.DayStarted += ModEntry.OnDayStarted;
             helper.Events.GameLoop.DayEnding += ModEntry.OnDayEnding;
+            
             
             //helper.Events.GameLoop.UpdateTicked += ModEntry.OnUpdateTicked;
             // Пример использования функции для проверки мода
@@ -159,6 +158,7 @@ namespace NpcTrackerMod
 
         private void DrawNpcRoute(NPC npc) // Пред-установка пути нпс
         {
+            string TargetLoaction;
             // Получение и обработка пути НПС
             if (SwitchGetNpcPath)
             {
@@ -167,41 +167,27 @@ namespace NpcTrackerMod
             
             if (path != null)
             {
-                bool isCurrentLocation = Game1.player.currentLocation == npc.currentLocation;
 
                 if (!SwitchTargetLocations)
                 {
-                    foreach (var point in path)
-                    {
-                        foreach (var GlobalPoints in point.Where(np => npc.currentLocation.Name == np.Item1)) //.Where(np => npc.currentLocation.Name == np.Item1)
-                        {
-                            foreach (var Cord in GlobalPoints.Item2)
-                            {
-
-
-                                DrawTiles.DrawTileWithPriority(Cord, Color.Green, 2);
-                                
-                            }
-                        }
-                            
-                    }
+                    TargetLoaction = npc.currentLocation.Name;
                 }
                 else
                 {
-                    foreach (var PathList in path)
-                    {
-                            // пофиксить двойное отправление и ощбий путь
-                        foreach (var GlobalPoints in PathList.Where(np => Game1.player.currentLocation.Name == np.Item1))
-                        {
-                            foreach (var pp in GlobalPoints.Item2)
-                            {
-                                //if (!Switchnpcpath) this.Monitor.Log($"Loc: {GlobalPoints.Item1} Route: {pp}", LogLevel.Info);
-
-                                DrawTiles.DrawTileWithPriority(pp, Color.Green, 2);
-                            }
-                        }                       
-                    }                   
+                    TargetLoaction = Game1.player.currentLocation.Name;
                 }
+
+
+                foreach (var point in path)
+                {
+                    foreach (var GlobalPoints in point.Where(np => TargetLoaction == np.Item1)) //.Where(np => npc.currentLocation.Name == np.Item1)
+                    {
+                        foreach (var Cord in GlobalPoints.Item2)
+                        {
+                            DrawTiles.DrawTileWithPriority(Cord, Color.Green, 2);                                
+                        }
+                    }                           
+                }                             
             }
             
             Switchnpcpath = true;

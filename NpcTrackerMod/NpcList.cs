@@ -4,37 +4,67 @@ using System.Linq;
 
 using StardewModdingAPI;
 using StardewValley;
+
+using Microsoft.Xna.Framework;
+
 namespace NpcTrackerMod
 {
     public class NpcList
     {
-        public HashSet<string> NpcVanillaList { get; }
+        private NpcTrackerMod modInstance;
         public HashSet<string> NpcBlackList { get; }
         public List<string> NpcTotalList { get; private set; }
         public List<string> NpcCurrentList { get; private set; }
 
+        public Dictionary<string, List<(string, List<Point>)>> NpcTotalToDayPath = new Dictionary<string, List<(string, List<Point>)>>();
 
 
-
-        public NpcList()
+        public NpcList(NpcTrackerMod instance)
         {
-            NpcVanillaList = new HashSet<string> { "Evelyn", "George", "Alex", "Emily", "Haley", "Jodi", "Sam", "Vincent", "Clint", "Lewis", "Abigail",
-                "Caroline", "Pierre", "Gus", "Pam", "Penny", "Harvey", "Elliott", "Demetrius", "Maru", "Robin", "Sebastian", "Linus", "Jas", "Marnie",
-                "Shane", "Leah", "Krobus", "Sandy", "Marlon", "Willy", "Dwarf", "Krobus", "Bouncer", "Gunther", "Marlon", "Henchman", "Birdie", "Mister Qi" };
+            this.modInstance = instance;
             NpcBlackList = new HashSet<string>();
-            // "Dwarf", "Krobus", "Bouncer", "Gunther", "Marlon", "Henchman", "Birdie", "Mister Qi"
             NpcTotalList = new List<string>();
             NpcCurrentList = new List<string>();
         }
-
-        public void NpcAddTotalList()
+        public void AddNpcPath(string npcName, List<(string, List<Point>)> LocationAndPoint)
         {
-            NpcTotalList = new List<string>();
+            // Проверяем, есть ли уже данные для этого NPC
+            if (!NpcTotalToDayPath.ContainsKey(npcName))
+            {
+                // Если нет, создаем новую запись для NPC
+                NpcTotalToDayPath[npcName] = new List<(string, List<Point>)>();
+                modInstance.Monitor.Log($"Добавлен нпс: {npcName}", LogLevel.Trace);
+            }
 
-            // Добавляем NPC в список NpcTotalList, если они не в черном списке
-            NpcTotalList = NpcVanillaList.Except(NpcBlackList).ToList();
-            NpcRemoveBlackTotalList();
+            // Получаем список локаций для данного NPC
+            var npcPaths = NpcTotalToDayPath[npcName];
+
+            // Проходим по каждой новой локации и её путям
+            foreach (var newLocationAndPoints in LocationAndPoint)
+            {
+                // Ищем, существует ли уже эта локация для NPC
+                var existingLocation = npcPaths.FirstOrDefault(p => p.Item1 == newLocationAndPoints.Item1);
+
+                if (existingLocation.Item1 == null)
+                {
+                    // Если локация не найдена, добавляем новую локацию и её пути
+                    npcPaths.Add((newLocationAndPoints.Item1, new HashSet<Point>(newLocationAndPoints.Item2).ToList()));
+                    modInstance.Monitor.Log($"Добавлена новая локация {newLocationAndPoints.Item1} для NPC {npcName}", LogLevel.Trace);
+                }
+                else
+                {
+                    // Если локация есть, добавляем уникальные координаты
+                    var uniquePoints = new HashSet<Point>(existingLocation.Item2);
+                    uniquePoints.UnionWith(newLocationAndPoints.Item2);
+                    existingLocation.Item2.Clear();
+                    existingLocation.Item2.AddRange(uniquePoints);
+
+                    modInstance.Monitor.Log($"Добавлены новые координаты в локацию {newLocationAndPoints.Item1} для NPC {npcName}", LogLevel.Trace);
+                }
+            }
         }
+
+        
 
         // Удаляем NPC из списка NpcTotalList, если они находятся в черном списке
         public void NpcRemoveBlackTotalList()
@@ -89,18 +119,17 @@ namespace NpcTrackerMod
                         {
                             NpcTotalList.Add(npc.Name);
                         }
-                    }                   
+                    }                     
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"ошибка { ex}", LogLevel.Warn);
+                    modInstance.Monitor.Log($"ошибка { ex}", LogLevel.Warn);
                 }
             }      
         }
         public void AddNpcToList(NPC npc) // Добавление в список нпс
         {
-            NpcAddCurrentList(npc.Name);
-            
+            NpcAddCurrentList(npc.Name);            
         }
     }
 }

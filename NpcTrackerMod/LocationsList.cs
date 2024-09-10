@@ -25,6 +25,12 @@ namespace NpcTrackerMod
         public Dictionary<string, List<(Point, string)>> LocationsTeleportCord { get; }
         List<(Point, string)> TeleportedCord = new List<(Point, string)>();
 
+        public List<(string, List<Point>)> LocationsPaths = new List<(string, List<Point>)>();
+
+        void GetLocationPath(string LocationName, Point CordPath)
+        {
+            
+        }
         /// <summary>
         /// Возвращает локацию куда тепнится нпс
         /// </summary>
