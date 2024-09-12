@@ -9,35 +9,73 @@ using Microsoft.Xna.Framework;
 
 namespace NpcTrackerMod
 {
+    /// <summary>
+    /// Класс для управления списком NPC, их маршрутов и черным списком.
+    /// </summary>
     public class NpcList
     {
-        private NpcTrackerMod modInstance;
+        private readonly NpcTrackerMod modInstance;
+        /// <summary>
+        /// Черный список NPC.
+        /// </summary>
         public HashSet<string> NpcBlackList { get; }
+
+        /// <summary>
+        /// Общий список NPC.
+        /// </summary>
         public List<string> NpcTotalList { get; private set; }
+
+        /// <summary>
+        /// Список текущих NPC в локации.
+        /// </summary>
         public List<string> NpcCurrentList { get; private set; }
 
-        public Dictionary<string, List<(string, List<Point>)>> NpcTotalToDayPath = new Dictionary<string, List<(string, List<Point>)>>();
+        /// <summary>
+        /// Словарь путей NPC на текущий день.
+        /// </summary>
+        public Dictionary<string, List<(string, List<Point>)>> NpcTotalToDayPath { get; private set; }
 
+        /// <summary>
+        /// Словарь глобальных путей NPC.
+        /// </summary>
+        public Dictionary<string, List<(string, List<Point>)>> NpcTotalGlobalPath { get; private set; }
+
+        /// <summary>
+        /// Конструктор класса NpcList.
+        /// </summary>
+        /// <param name="instance">Экземпляр основного мода.</param>
 
         public NpcList(NpcTrackerMod instance)
         {
-            this.modInstance = instance;
+            modInstance = instance;
             NpcBlackList = new HashSet<string>();
             NpcTotalList = new List<string>();
             NpcCurrentList = new List<string>();
+            NpcTotalToDayPath = new Dictionary<string, List<(string, List<Point>)>>();
+            NpcTotalGlobalPath = new Dictionary<string, List<(string, List<Point>)>>();
         }
-        public void AddNpcPath(string npcName, List<(string, List<Point>)> LocationAndPoint)
+        /// <summary>
+        /// Добавляет путь NPC в указанный словарь путей.
+        /// </summary>
+        /// <param name="npc">NPC, для которого добавляется путь.</param>
+        /// <param name="NpcTotalPath">Словарь путей NPC.</param>
+        /// <param name="Global">Флаг, указывающий, является ли путь глобальным.</param>
+        public void AddNpcPath(NPC npc, Dictionary<string, List<(string, List<Point>)>> NpcTotalPath, bool Global)
         {
-            // Проверяем, есть ли уже данные для этого NPC
-            if (!NpcTotalToDayPath.ContainsKey(npcName))
+            // Проверка наличия данных для NPC
+            if (!NpcTotalPath.ContainsKey(npc.Name))
             {
                 // Если нет, создаем новую запись для NPC
-                NpcTotalToDayPath[npcName] = new List<(string, List<Point>)>();
-                modInstance.Monitor.Log($"Добавлен нпс: {npcName}", LogLevel.Trace);
+                NpcTotalPath[npc.Name] = new List<(string, List<Point>)>();
+                modInstance.Monitor.Log($"Добавлен нпс: {npc.Name}", LogLevel.Trace);
             }
 
             // Получаем список локаций для данного NPC
-            var npcPaths = NpcTotalToDayPath[npcName];
+            var npcPaths = NpcTotalPath[npc.Name];
+            var LocationAndPoint = Global
+                ? modInstance.NpcManager.GetNpcGlobalRoutePoints(npc)
+                : modInstance.NpcManager.GetNpcRoutePoints(npc);
+
 
             // Проходим по каждой новой локации и её путям
             foreach (var newLocationAndPoints in LocationAndPoint)
@@ -49,7 +87,7 @@ namespace NpcTrackerMod
                 {
                     // Если локация не найдена, добавляем новую локацию и её пути
                     npcPaths.Add((newLocationAndPoints.Item1, new HashSet<Point>(newLocationAndPoints.Item2).ToList()));
-                    modInstance.Monitor.Log($"Добавлена новая локация {newLocationAndPoints.Item1} для NPC {npcName}", LogLevel.Trace);
+                    modInstance.Monitor.Log($"Добавлена новая локация {newLocationAndPoints.Item1} для NPC {npc.Name}", LogLevel.Trace);
                 }
                 else
                 {
@@ -59,32 +97,43 @@ namespace NpcTrackerMod
                     existingLocation.Item2.Clear();
                     existingLocation.Item2.AddRange(uniquePoints);
 
-                    modInstance.Monitor.Log($"Добавлены новые координаты в локацию {newLocationAndPoints.Item1} для NPC {npcName}", LogLevel.Trace);
+                    modInstance.Monitor.Log($"Добавлены новые координаты в локацию {newLocationAndPoints.Item1} для NPC {npc.Name}", LogLevel.Trace);
                 }
             }
         }
 
-        
 
-        // Удаляем NPC из списка NpcTotalList, если они находятся в черном списке
+
+        /// <summary>
+        /// Удаляет NPC из общего списка, если они находятся в черном списке.
+        /// </summary>
         public void NpcRemoveBlackTotalList()
         {
             NpcTotalList = NpcTotalList.Except(NpcBlackList).ToList();
         }
 
-        // добавить нпс в черный список
+        /// <summary>
+        /// Добавляет NPC в черный список.
+        /// </summary>
+        /// <param name="npc">Имя NPC для добавления в черный список.</param>
         public void AddNpcBlackList(string npc)
         {
             NpcBlackList.Add(npc);
         }
 
-        // удалить нпс из черного списка
+        /// <summary>
+        /// Удаляет NPC из черного списка.
+        /// </summary>
+        /// <param name="npc">Имя NPC для удаления из черного списка.</param>
         public void RemoveNpcBlackList(string npc)
         {
             NpcBlackList.Remove(npc);
         }
 
-        // добавить нпс из текущей локации
+        /// <summary>
+        /// Добавляет NPC в текущий список.
+        /// </summary>
+        /// <param name="npc">Имя NPC для добавления в текущий список.</param>
         public void NpcAddCurrentList(string npc)
         {
             if (NpcTotalList.Contains(npc))
@@ -92,21 +141,25 @@ namespace NpcTrackerMod
                 NpcCurrentList.Add(npc);
             }
         }
+
+        /// <summary>
+        /// Создает и обновляет списки NPC и черного списка.
+        /// </summary>
         public void CreateTotalAndBlackList()
         {
             // Проверка для получения всех персонажей во всех локациях
             var npcList =  Game1.locations
                 .Where(location => location?.characters != null)
                 .SelectMany(location => location.characters)
-                .Where(npc => npc != null); // Отфильтровываем возможные null значения
-
+                .Where(npc => npc != null) // Отфильтровываем возможные null значения
+                .ToList(); // Преобразуем в список
             foreach (var npc in npcList)
             {
                 try
                 {
                     if (npc.Schedule == null || !npc.Schedule.Any())
                     {
-                        //Console.WriteLine($"У {npc.Name} нет пути", LogLevel.Warn);
+                        modInstance.Monitor.Log($"У {npc.Name} нет пути", LogLevel.Trace);
                         if (!NpcBlackList.Contains(npc.Name))
                         {
                             NpcBlackList.Add(npc.Name);
@@ -118,15 +171,22 @@ namespace NpcTrackerMod
                         if (!NpcTotalList.Contains(npc.Name))
                         {
                             NpcTotalList.Add(npc.Name);
+                            AddNpcPath(npc, NpcTotalToDayPath, false);
+                            //AddNpcPath(npc, NpcTotalGlobalPath, true);
                         }
                     }                     
                 }
                 catch (Exception ex)
                 {
-                    modInstance.Monitor.Log($"ошибка { ex}", LogLevel.Warn);
+                    modInstance.Monitor.Log($"Ошибка обработки NPC {npc.Name}: {ex.Message}", LogLevel.Warn);
                 }
-            }      
+            }
         }
+
+        /// <summary>
+        /// Добавляет NPC в список.
+        /// </summary>
+        /// <param name="npc">Имя NPC для добавления.</param>
         public void AddNpcToList(NPC npc) // Добавление в список нпс
         {
             NpcAddCurrentList(npc.Name);            
