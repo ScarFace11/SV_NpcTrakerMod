@@ -26,11 +26,14 @@ namespace NpcTrackerMod
         /// <summary> Флаг отображения сетки. </summary>
         public bool DisplayGrid;
 
-        /// <summary> Переключает отслеживание всех локаций или только текущей локации игрока. </summary>
-        public bool SwitchTargetLocations; // true - Все локации / false - Локация с игроком  
+        /// <summary> Флаг установки локаций. </summary>
+        public bool LocationSet = false;
+
+        /// <summary>Флаг полного списка NPC. </summary>
+        public bool SwitchListFull;
 
         /// <summary> Переключает между отслеживанием всех NPC или конкретного NPC. </summary>
-        public bool SwitchTargetNPC = false; // true - выбор отедльного нпс / false - всех нпс
+        public bool SwitchTargetNPC = false;
 
         /// <summary> Флаг получения пути NPC. </summary>
         public bool SwitchGetNpcPath { get; set; } = true;
@@ -38,13 +41,8 @@ namespace NpcTrackerMod
         /// <summary> Флаг отображения глобального пути NPC. </summary>
         public bool SwitchGlobalNpcPath = false;
 
-        /// <summary>Флаг полного списка NPC. </summary>
-        public bool SwitchListFull;
-
-        /// <summary> Флаг установки локаций. </summary>
-        public bool LocationSet = false;
-
-
+        /// <summary> Переключает отслеживание всех локаций или только текущей локации игрока. </summary>
+        public bool SwitchTargetLocations;
 
         /// <summary> Количество NPC. </summary>
         public int NpcCount = 0;
