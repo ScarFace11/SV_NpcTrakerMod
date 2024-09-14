@@ -1,40 +1,56 @@
 ﻿using System;
-using StardewModdingAPI.Events;
-using StardewModdingAPI.Utilities;
 using StardewModdingAPI;
 using StardewValley;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace NpcTrackerMod
 {
-    // Этот класс будет отвечать за работу с NPC: отслеживание, фильтрацию, получение маршрутов и добавление в списки.
+    /// <summary>
+    /// Класс для управления NPC: отслеживание, фильтрация маршрутов и работа со списками NPC.
+    /// </summary>
     public class NpcManager
     {
         private readonly NpcTrackerMod modInstance;
 
         private string LastLocationName;
+
+        // <summary>
+        /// Инициализирует экземпляр <see cref="NpcManager"/> с указанной ссылкой на мод.
+        /// </summary>
+        /// <param name="instance">Ссылка на экземпляр мода NpcTrackerMod.</param>
         public NpcManager(NpcTrackerMod instance)
         {
-            this.modInstance = instance;
+            modInstance = instance;
         }
+        /// <summary>
+        /// Получает список NPC, которые должны отслеживаться.
+        /// </summary>
+        /// <param name="trackAllLocations">Флаг, указывающий, нужно ли отслеживать NPC во всех локациях.</param>
+        /// <param name="NpcList">Список имен NPC для отслеживания.</param>
+        /// <returns>Коллекция NPC для отслеживания.</returns>
         public IEnumerable<NPC> GetNpcsToTrack(bool trackAllLocations, List<string> NpcList)
         {
-            // Проверка для получения всех персонажей в текущей локации
+            // Возвращает всех NPC в текущей локации
             if (!trackAllLocations)
                 return Game1.currentLocation?.characters
                 .Where(npc => NpcList.Contains(npc.Name))
                 ?? Enumerable.Empty<NPC>();
 
-            // Проверка для получения всех персонажей во всех локациях
+            // Возвращает всех NPC во всех локациях
             return Game1.locations
                 .Where(location => location?.characters != null)
                 .SelectMany(location => location.characters)
                 .Where(npc => npc != null && NpcList.Contains(npc.Name)); // Отфильтровываем возможные null значения
         }
-        public List<(string, List<Point>)> GetNpcGlobalRoutePoints(NPC npc) // Сбор данных об пути от нпс из всех рассписаний
+
+        /// <summary>
+        /// Получает глобальные маршруты NPC на основе всех их расписаний.
+        /// </summary>
+        /// <param name="npc">NPC, для которого требуется получить маршруты.</param>
+        /// <returns>Список пар, где строка — это название локации, а список точек — это маршрут NPC.</returns>
+        public List<(string, List<Point>)> GetNpcGlobalRoutePoints(NPC npc)
         {
             // Проверяем, есть ли у NPC расписание
             if (npc.Schedule == null || !npc.Schedule.Any())
@@ -52,20 +68,23 @@ namespace NpcTrackerMod
                 {
                     var rawData = schedule.Value;
                     string key = schedule.Key;
-                    modInstance.Monitor.Log($"Processing schedule key: {schedule.Key} with data: {rawData}", LogLevel.Debug);
+                    //modInstance.Monitor.Log($"Processing schedule key: {key} with data: {rawData}", LogLevel.Debug);
 
                     // Простая проверка на валидность данных
                     if (string.IsNullOrWhiteSpace(key) || !rawData.Contains(" ") ||
                         rawData.Contains("MAIL") || rawData.Contains("GOTO") || rawData.Contains("NO_SCHEDULE") ||
                         key == "CommunityCenter_Replacement" || key == "JojaMart_Replacement")
                     {
-                        modInstance.Monitor.Log($"Skipping invalid or problematic schedule key: {key}", LogLevel.Warn);
+                        //modInstance.Monitor.Log($"Skipping invalid or problematic schedule key: {key}", LogLevel.Warn);
                         continue;
                     }
                     // Парсинг расписания и добавление маршрутов
                     try
                     {
                         var parsedSchedule = npc.parseMasterSchedule(key, rawData);
+                        var chto = npc.getMasterScheduleEntry(key);
+                        modInstance.Monitor.Log($"Processing schedule key: {chto}", LogLevel.Debug);
+
                         foreach (var path in parsedSchedule)
                         {
                             totalNpcPath.AddRange(NpcPathFilter(npc.currentLocation?.Name, path.Value.route));
@@ -87,7 +106,13 @@ namespace NpcTrackerMod
             LastLocationName = null;
             return totalNpcPath;
         }
-        public List<(string, List<Point>)> GetNpcRoutePoints(NPC npc) // Сбор данных об пути от нпс на текущий день
+
+        /// <summary>
+        /// Получает маршруты NPC на текущий день.
+        /// </summary>
+        /// <param name="npc">NPC, для которого требуется получить маршруты на день.</param>
+        /// <returns>Список пар, где строка — это название локации, а список точек — это маршрут NPC на день.</returns>
+        public List<(string, List<Point>)> GetNpcRoutePoints(NPC npc)
         {
             // Проверяем наличие расписания у NPC
             if (npc.Schedule?.Any() != true)
@@ -106,7 +131,13 @@ namespace NpcTrackerMod
             LastLocationName = null;
             return totalNpcPath;
         }
-        
+
+        /// <summary>
+        /// Фильтрует маршрут NPC, отделяя сегменты до и после телепортации.
+        /// </summary>
+        /// <param name="LocationName">Название текущей локации.</param>
+        /// <param name="ListPoints">Маршрут, который нужно отфильтровать.</param>
+        /// <returns>Список пар, где строка — это название локации, а список точек — это сегмент пути NPC.</returns>
         public List<(string, List<Point>)> NpcPathFilter(string LocationName, Stack<Point> ListPoints) // Отделение пути передвижение, от пути после телепорта
         {
 

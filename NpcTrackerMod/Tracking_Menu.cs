@@ -2,40 +2,40 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using StardewValley;
-using System.Collections.Generic;
 using StardewValley.BellsAndWhistles;
 using StardewModdingAPI;
 using System.Linq;
 
 namespace NpcTrackerMod
 {
+    /// <summary>
+    /// Класс для создания меню отслеживания NPC с различными настройками и функционалом.
+    /// </summary>
     public class TrackingMenu : IClickableMenu
     {
-        private ClickableCheckbox DisplayGridCheckbox;
-        private ClickableCheckbox SwitchTargetLocationsCheckbox;
+        private ClickableCheckbox DisplayGridCheckbox;     
         private ClickableCheckbox SwitchTargetNPCCheckbox;
         private ClickableCheckbox SwitchGlobalPathCheckbox;
+        private ClickableCheckbox SwitchTargetLocationsCheckbox;
 
         private ClickableTextureComponent exitButton;
         private ClickableTextureComponent leftArrowButton;
         private ClickableTextureComponent rightArrowButton;
-        private string displayText = "Npc Name"; // Пример текста, который будет отображаться между кнопками
 
+        private string displayText;
 
+        /// <summary>
+        /// Конструктор для создания нового меню отслеживания NPC.
+        /// </summary>
         public TrackingMenu()
         : base(Game1.viewport.Width / 2 - 300, Game1.viewport.Height / 2 - 300, 600, 600, true)
         {
             InitializeMenuComponents();
-
-            if (NpcTrackerMod.Instance == null)
-            {
-                // Здесь можно добавить обработку ошибки или попытаться инициализировать объект
-                throw new System.Exception("NpcTrackerMod.Instance is null. Ensure it is initialized before creating TrackingMenu.");
-            }
-
-
-
         }
+
+        /// <summary>
+        /// Инициализирует компоненты меню, включая кнопки и чекбоксы.
+        /// </summary>
         private void InitializeMenuComponents()
         {
             // Exit button
@@ -56,6 +56,15 @@ namespace NpcTrackerMod
             leftArrowButton = CreateArrowButton(xPositionOnScreen + 30, yPositionOnScreen + 300, 352, 495);
             rightArrowButton = CreateArrowButton(xPositionOnScreen + 250, yPositionOnScreen + 300, 365, 495);
         }
+
+        /// <summary>
+        /// Создает кнопку с изображением стрелки.
+        /// </summary>
+        /// <param name="x">Координата X для кнопки.</param>
+        /// <param name="y">Координата Y для кнопки.</param>
+        /// <param name="sourceX">X координата исходного изображения.</param>
+        /// <param name="sourceY">Y координата исходного изображения.</param>
+        /// <returns>Возвращает объект ClickableTextureComponent для кнопки стрелки.</returns>
         private ClickableTextureComponent CreateArrowButton(int x, int y, int sourceX, int sourceY)
         {
             return new ClickableTextureComponent(
@@ -65,6 +74,11 @@ namespace NpcTrackerMod
                 4f
             );
         }
+
+        /// <summary>
+        /// Отрисовывает меню и его компоненты.
+        /// </summary>
+        /// <param name="b">SpriteBatch, используемый для отрисовки элементов.</param>
         public override void draw(SpriteBatch b)
         {
             DrawBackground(b);
@@ -75,12 +89,21 @@ namespace NpcTrackerMod
 
             drawMouse(b);
         }
+
+        /// <summary>
+        /// Отрисовывает фон меню.
+        /// </summary>
+        /// <param name="b">SpriteBatch, используемый для отрисовки фона.</param>
         private void DrawBackground(SpriteBatch b)
         {
             IClickableMenu.drawTextureBox(b, Game1.menuTexture, new Rectangle(0, 256, 60, 60), xPositionOnScreen, yPositionOnScreen, width, height, Color.White, 1f, true);
             SpriteText.drawString(b, "NPC Tracker Menu", xPositionOnScreen + 100, yPositionOnScreen + 40);
         }
 
+        /// <summary>
+        /// Отрисовывает чекбоксы меню.
+        /// </summary>
+        /// <param name="b">SpriteBatch, используемый для отрисовки чекбоксов.</param>
         private void DrawCheckBoxes(SpriteBatch b)
         {
             DisplayGridCheckbox.draw(b, "Grid");
@@ -89,28 +112,49 @@ namespace NpcTrackerMod
             SwitchGlobalPathCheckbox.draw(b, "GlobalPath");
         }
 
+        /// <summary>
+        /// Отрисовывает кнопки-стрелки для навигации.
+        /// </summary>
+        /// <param name="b">SpriteBatch, используемый для отрисовки стрелок.</param>
         private void DrawArrowButtons(SpriteBatch b)
         {
             leftArrowButton.draw(b);
             rightArrowButton.draw(b);
         }
 
+        /// <summary>
+        /// Отрисовывает кнопку выхода.
+        /// </summary>
+        /// <param name="b">SpriteBatch, используемый для отрисовки кнопки выхода.</param>
         private void DrawExitButton(SpriteBatch b)
         {
             exitButton.draw(b);
         }
 
+        /// <summary>
+        /// Отрисовывает имя выбранного NPC.
+        /// </summary>
+        /// <param name="b">SpriteBatch, используемый для отрисовки текста NPC.</param>
         private void DrawNPCText(SpriteBatch b)
         {
             if (SwitchTargetNPCCheckbox.isChecked && NpcTrackerMod.Instance.NpcList.NpcCurrentList.Any())
             {
-                displayText = NpcTrackerMod.Instance.NpcList.NpcCurrentList[NpcTrackerMod.Instance.NpcSelected];
+                displayText = NpcTrackerMod.Instance.NpcList.GetNpcFromList();
+            }
+            else
+            {
+                displayText = "Npc Name";
             }
 
             Utility.drawTextWithShadow(b, displayText, Game1.dialogueFont, new Vector2(xPositionOnScreen + 100, yPositionOnScreen + 315), Game1.textColor);
         }
 
-
+        /// <summary>
+        /// Обрабатывает клик по элементам меню.
+        /// </summary>
+        /// <param name="x">Координата X клика.</param>
+        /// <param name="y">Координата Y клика.</param>
+        /// <param name="playSound">Если true, проигрывается звук клика.</param>
         public override void receiveLeftClick(int x, int y, bool playSound = true)
         {
             base.receiveLeftClick(x, y, playSound);
@@ -121,6 +165,12 @@ namespace NpcTrackerMod
             HandleArrowButtonClick(x, y);
             HandleCheckBoxClick(x, y);
         }
+
+        /// <summary>
+        /// Обрабатывает клик по кнопкам-стрелкам для смены NPC.
+        /// </summary>
+        /// <param name="x">Координата X клика.</param>
+        /// <param name="y">Координата Y клика.</param>
         private void HandleArrowButtonClick(int x, int y)
         {
             if (leftArrowButton.containsPoint(x, y) && SwitchTargetNPCCheckbox.isChecked && NpcTrackerMod.Instance.NpcList.NpcCurrentList.Any())
@@ -132,14 +182,25 @@ namespace NpcTrackerMod
                 ChangeNPCSelection(1);
             }
         }
+
+        /// <summary>
+        /// Изменяет текущий выбранный NPC в зависимости от направления (влево/вправо).
+        /// </summary>
+        /// <param name="direction">Направление изменения: -1 для предыдущего, 1 для следующего NPC.</param>
         private void ChangeNPCSelection(int direction)
         {
             NpcTrackerMod.Instance.NpcSelected = MathHelper.Clamp(NpcTrackerMod.Instance.NpcSelected + direction, 0, NpcTrackerMod.Instance.NpcList.NpcCurrentList.Count - 1);
-            displayText = NpcTrackerMod.Instance.NpcList.NpcCurrentList[NpcTrackerMod.Instance.NpcSelected];
+            displayText = NpcTrackerMod.Instance.NpcList.GetNpcFromList();
+
             NpcTrackerMod.Instance.tileStates.Clear();
-            NpcTrackerMod.Instance.Switchnpcpath = false;
             NpcTrackerMod.Instance.SwitchGetNpcPath = true;
         }
+
+        /// <summary>
+        /// Обрабатывает клики по чекбоксам для изменения состояний.
+        /// </summary>
+        /// <param name="x">Координата X клика.</param>
+        /// <param name="y">Координата Y клика.</param>
         private void HandleCheckBoxClick(int x, int y)
         {
             // отображение сетки
@@ -155,7 +216,7 @@ namespace NpcTrackerMod
             // выбор нпс
             if (DisplayGridCheckbox.isChecked && SwitchTargetNPCCheckbox.containsPoint(x, y))
             {
-                ToggleNPCSelection(SwitchTargetNPCCheckbox, ref NpcTrackerMod.Instance.SwitchTargetNPC);
+                ToggleTargetNPC(SwitchTargetNPCCheckbox, ref NpcTrackerMod.Instance.SwitchTargetNPC);
             }
             // Отображение всех маршрутов
             if (DisplayGridCheckbox.isChecked && SwitchGlobalPathCheckbox.containsPoint(x, y))
@@ -163,11 +224,19 @@ namespace NpcTrackerMod
                 ToggleCheckBox(SwitchGlobalPathCheckbox, ref NpcTrackerMod.Instance.SwitchGlobalNpcPath);
             }
         }
+
+        /// <summary>
+        /// Переключает состояния CheckBox.
+        /// </summary>
         private void ToggleCheckBox(ClickableCheckbox checkbox, ref bool state)
         {
             state = !state;
             checkbox.isChecked = state;
         }
+
+        /// <summary>
+        /// Переключает состояние отображения всех локаций.
+        /// </summary>
         private void ToggleTargetLocations(ClickableCheckbox checkbox, ref bool state)
         {
             state = !state;
@@ -175,17 +244,26 @@ namespace NpcTrackerMod
             NpcTrackerMod.Instance.tileStates.Clear();           
             NpcTrackerMod.Instance.SwitchGetNpcPath = true;
         }
-        private void ToggleNPCSelection(ClickableCheckbox checkbox, ref bool state)
+
+        /// <summary>
+        /// Переключает состояние выбора NPC.
+        /// </summary>
+        private void ToggleTargetNPC(ClickableCheckbox checkbox, ref bool state)
         {
             state = !state;
             checkbox.isChecked = state;
+
             NpcTrackerMod.Instance.tileStates.Clear();
             NpcTrackerMod.Instance.NpcList.NpcCurrentList.Clear();
             NpcTrackerMod.Instance.SwitchGetNpcPath = true;
             NpcTrackerMod.Instance.SwitchListFull = false;
-            if (state) NpcTrackerMod.Instance.NpcSelected = 0;
-            displayText = "Npc Name";
+            if (state)
+            {                           
+                NpcTrackerMod.Instance.NpcSelected = 0;
+            }
         }
+
+
         public class ClickableCheckbox : ClickableComponent
         {
             public bool isChecked;

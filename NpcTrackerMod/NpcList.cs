@@ -47,10 +47,10 @@ namespace NpcTrackerMod
 
         public NpcList(NpcTrackerMod instance)
         {
-            modInstance = instance;
-            NpcBlackList = new HashSet<string>();
+            modInstance = instance;           
             NpcTotalList = new List<string>();
             NpcCurrentList = new List<string>();
+            NpcBlackList = new HashSet<string>();
             NpcTotalToDayPath = new Dictionary<string, List<(string, List<Point>)>>();
             NpcTotalGlobalPath = new Dictionary<string, List<(string, List<Point>)>>();
         }
@@ -134,12 +134,15 @@ namespace NpcTrackerMod
         /// Добавляет NPC в текущий список.
         /// </summary>
         /// <param name="npc">Имя NPC для добавления в текущий список.</param>
-        public void NpcAddCurrentList(string npc)
+        public void NpcAddCurrentList(IEnumerable<NPC> npcList)
         {
-            if (NpcTotalList.Contains(npc))
+            foreach (var npc in npcList)
+            if (NpcTotalList.Contains(npc.Name))
             {
-                NpcCurrentList.Add(npc);
+                NpcCurrentList.Add(npc.Name);
             }
+            
+            
         }
 
         /// <summary>
@@ -147,7 +150,7 @@ namespace NpcTrackerMod
         /// </summary>
         public void CreateTotalAndBlackList()
         {
-            // Проверка для получения всех персонажей во всех локациях
+            // Получение всех NPC во всех локациях
             var npcList =  Game1.locations
                 .Where(location => location?.characters != null)
                 .SelectMany(location => location.characters)
@@ -157,6 +160,7 @@ namespace NpcTrackerMod
             {
                 try
                 {
+                    // Проверка, есть ли у NPC расписание
                     if (npc.Schedule == null || !npc.Schedule.Any())
                     {
                         modInstance.Monitor.Log($"У {npc.Name} нет пути", LogLevel.Trace);
@@ -165,31 +169,24 @@ namespace NpcTrackerMod
                             NpcBlackList.Add(npc.Name);
                         }                       
                     }
-                    else
+                    else if (!NpcTotalList.Contains(npc.Name))
                     {
-                        //Console.WriteLine($"У {npc.Name} есть путь", LogLevel.Debug);
-                        if (!NpcTotalList.Contains(npc.Name))
-                        {
-                            NpcTotalList.Add(npc.Name);
-                            AddNpcPath(npc, NpcTotalToDayPath, false);
-                            //AddNpcPath(npc, NpcTotalGlobalPath, true);
-                        }
+                        NpcTotalList.Add(npc.Name);
+                        AddNpcPath(npc, NpcTotalToDayPath, false);
+                        //if (npc.Name == "Lewis")
+                            //AddNpcPath(npc, NpcTotalGlobalPath, true);                      
                     }                     
                 }
                 catch (Exception ex)
                 {
                     modInstance.Monitor.Log($"Ошибка обработки NPC {npc.Name}: {ex.Message}", LogLevel.Warn);
                 }
-            }
+            }           
         }
 
-        /// <summary>
-        /// Добавляет NPC в список.
-        /// </summary>
-        /// <param name="npc">Имя NPC для добавления.</param>
-        public void AddNpcToList(NPC npc) // Добавление в список нпс
+        public string GetNpcFromList()
         {
-            NpcAddCurrentList(npc.Name);            
+            return NpcTotalToDayPath.FirstOrDefault(k => k.Key == NpcCurrentList[modInstance.NpcSelected]).Key;
         }
     }
 }

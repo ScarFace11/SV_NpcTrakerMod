@@ -12,12 +12,21 @@ namespace NpcTrackerMod
     {
         private readonly NpcTrackerMod modInstance;
         private bool DayStarted = false;
+
+        /// <summary>
+        /// Конструктор класса ModEntry.
+        /// </summary>
+        /// /// <param name="instance">Экземпляр NpcTrackerMod.</param>
         public ModEntry(NpcTrackerMod instance)
         {
             modInstance = instance;
         }
 
-        // Обработка нажатий кнопок
+        /// <summary>
+        /// Обрабатывает нажатие кнопок.
+        /// </summary>
+        /// <param name="sender">Объект, отправивший событие.</param>
+        /// <param name="e">Событие нажатия кнопки.</param>
         public void OnButtonPressed(object sender, ButtonPressedEventArgs e)
         {
             if (Game1.activeClickableMenu != null) return; // Проверка, что нет активного меню
@@ -27,30 +36,25 @@ namespace NpcTrackerMod
                 case SButton.G:
                     OpenTrackingMenu();
                     break;
-                case SButton.X:
-                    ToggleShowAllRoutes();
-                    break;
                 case SButton.Z:
-                    LogCurrentLocationWarps(); // Закомментировано
+                    LogCurrentLocationWarps();
                     break;
             }
         }
 
-        // Открытие меню отслеживания
+        /// <summary>
+        /// Открывает меню отслеживания NPC.
+        /// </summary>
         private void OpenTrackingMenu()
         {
             Game1.activeClickableMenu = new TrackingMenu();
         }
 
-        // Переключение отображения всех маршрутов
-        private void ToggleShowAllRoutes()
-        {
-            modInstance.showAllRoutes = !modInstance.showAllRoutes;
-            modInstance.SwitchGetNpcPath = modInstance.showAllRoutes;
-            modInstance.Monitor.Log($"Смена локаций: {modInstance.showAllRoutes}", LogLevel.Debug);
-        }
-
-        // Обработка события начала дня
+        /// <summary>
+        /// Обрабатывает событие начала дня.
+        /// </summary>
+        /// <param name="sender">Объект, отправивший событие.</param>
+        /// <param name="e">Событие начала дня.</param>
         public void OnDayStarted(object sender, DayStartedEventArgs e)
         {
             if (!Context.IsWorldReady) return;
@@ -64,7 +68,9 @@ namespace NpcTrackerMod
             ClearDataForNewDay();
         }
 
-        // Проверка изменения количества NPC и обновление списков
+        /// <summary>
+        /// Обновляет количество NPC и пересоздает списки, если их количество изменилось.
+        /// </summary>
         private void UpdateNpcCount()
         {
             int npcCount = Game1.characterData.Count();
@@ -74,7 +80,9 @@ namespace NpcTrackerMod
             modInstance.NpcCount = npcCount;
         }
 
-        // Очистка данных перед началом нового дня
+        /// <summary>
+        /// Очищает данные для нового дня.
+        /// </summary>
         private void ClearDataForNewDay()
         {
             modInstance.tileStates.Clear();
@@ -82,19 +90,31 @@ namespace NpcTrackerMod
             modInstance.npcTemporaryColors.Clear();
         }
 
-        // Обработка события конца дня
+        /// <summary>
+        /// Обрабатывает событие конца дня.
+        /// </summary>
+        /// <param name="sender">Объект, отправивший событие.</param>
+        /// <param name="e">Событие конца дня.</param>
         public void OnDayEnding(object sender, DayEndingEventArgs e)
         {
             DayStarted = false;
         }
 
-        // Проверка наличия определенного мода
+        /// <summary>
+        /// Проверяет, установлен ли определенный мод по его ID.
+        /// </summary>
+        /// <param name="modId">ID мода.</param>
+        /// <returns>Возвращает true, если мод установлен, иначе false.</returns>
         public bool IsModInstalled(string modId)
         {
             return modInstance.Helper.ModRegistry.IsLoaded(modId);
         }
 
-        // Отрисовка объектов в мире
+        /// <summary>
+        /// Отрисовывает сетку и маршруты NPC в мире игры.
+        /// </summary>
+        /// <param name="sender">Объект, отправивший событие.</param>
+        /// <param name="e">Событие отрисовки мира.</param>
         public void OnRenderedWorld(object sender, RenderedWorldEventArgs e)
         {           
             if (!modInstance.DisplayGrid) return;
@@ -113,7 +133,9 @@ namespace NpcTrackerMod
             }
         }
 
-        // Все локации и их координаты телепортов
+        /// <summary>
+        /// Логирует текущие локации и их координаты телепортов.
+        /// </summary>
         private void LogCurrentLocationWarps()
         {
             AllGameLocation();
@@ -142,7 +164,9 @@ namespace NpcTrackerMod
             }
         }
 
-        // Лог для отображения всех локаций в консоли
+        /// <summary>
+        /// Логирует все локации в консоли.
+        /// </summary>
         private void AllGameLocation()
         {
             foreach (var location in Game1.locations)
@@ -151,7 +175,11 @@ namespace NpcTrackerMod
             }
         }
 
-        // Обновление по тикам
+        /// <summary>
+        /// Обрабатывает обновление по тикам.
+        /// </summary>
+        /// <param name="sender">Объект, отправивший событие.</param>
+        /// <param name="e">Событие обновления тиков.</param>
         public void OnUpdateTicked(object sender, UpdateTickedEventArgs e)
         {
             const int tickRate = 60;

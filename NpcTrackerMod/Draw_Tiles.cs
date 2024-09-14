@@ -12,7 +12,10 @@ namespace NpcTrackerMod
     public class Draw_Tiles
     {
         private readonly int _tileSize;
+
+        /// <summary> Текстура линии для отрисовки. </summary>
         private readonly Texture2D _lineTexture;
+
         private readonly NpcTrackerMod modInstance;
 
         /// <summary>
@@ -21,13 +24,24 @@ namespace NpcTrackerMod
         /// <param name="instance">Экземпляр модификации.</param>
         /// <param name="tileSize">Размер тайла в пикселях.</param>
         /// <param name="lineTexture">Текстура линии для отрисовки.</param>
-        public Draw_Tiles(NpcTrackerMod instance, int tileSize, Texture2D lineTexture)
+        public Draw_Tiles(NpcTrackerMod instance, int tileSize)
         {
             _tileSize = tileSize;
             modInstance = instance;
-            _lineTexture = lineTexture;
+            _lineTexture = CreateLineTexture(Game1.graphics.GraphicsDevice);
         }
 
+        /// <summary>
+        /// Создает текстуру линии для отрисовки.
+        /// </summary>
+        /// <param name="graphicsDevice">Графическое устройство.</param>
+        /// <returns>Созданная текстура.</returns>
+        private static Texture2D CreateLineTexture(GraphicsDevice graphicsDevice)
+        {
+            var texture = new Texture2D(graphicsDevice, 1, 1);
+            texture.SetData(new[] { Color.White });
+            return texture;
+        }
         /// <summary>
         /// Отрисовывает сетку на экране.
         /// </summary>
