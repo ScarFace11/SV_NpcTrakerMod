@@ -28,7 +28,7 @@ namespace NpcTrackerMod
         /// <summary>
         /// Список текущих NPC в локации.
         /// </summary>
-        public List<string> NpcCurrentList { get; private set; }
+        public List<string> NpcCurrentList { get; set; }
 
         /// <summary>
         /// Словарь путей NPC на текущий день.
@@ -140,9 +140,7 @@ namespace NpcTrackerMod
             if (NpcTotalList.Contains(npc.Name))
             {
                 NpcCurrentList.Add(npc.Name);
-            }
-            
-            
+            }          
         }
 
         /// <summary>
@@ -172,9 +170,11 @@ namespace NpcTrackerMod
                     else if (!NpcTotalList.Contains(npc.Name))
                     {
                         NpcTotalList.Add(npc.Name);
+                        //if (npc.Name == "Gus")
                         AddNpcPath(npc, NpcTotalToDayPath, false);
-                        //if (npc.Name == "Lewis")
-                            //AddNpcPath(npc, NpcTotalGlobalPath, true);                      
+
+                        //if (npc.Name == "Gus") 
+                        AddNpcPath(npc, NpcTotalGlobalPath, true);                      
                     }                     
                 }
                 catch (Exception ex)

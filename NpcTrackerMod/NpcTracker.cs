@@ -192,19 +192,30 @@ namespace NpcTrackerMod
         /// <param name="npc">NPC для отрисовки маршрута.</param>
         private void DrawNpcRoute(NPC npc)
         {
-            // Получение и обработка пути НПС
-            if (SwitchGetNpcPath)
+            string targetLocation;
+
+            // Проверка на наличие расписания
+            if (!SwitchGetNpcPath || path == null)
             {
-                path = new List<List<(string, List<Point>)>>()
-                {
-                    (SwitchGlobalNpcPath
-                        ? NpcList.NpcTotalGlobalPath
-                        : NpcList.NpcTotalToDayPath)
-                        .FirstOrDefault(i => i.Key == npc.Name).Value
-                };
+                return;
             }
 
-            if (path == null) return;
+            if (SwitchGlobalNpcPath)
+            {
+                var totalPath = NpcList.NpcTotalGlobalPath.FirstOrDefault(i => i.Key == npc.Name);
+                path = new List<List<(string, List<Point>)>> { totalPath.Value };
+            }
+            else
+            {
+                var totalPath = NpcList.NpcTotalToDayPath.FirstOrDefault(i => i.Key == npc.Name);
+                path = new List<List<(string, List<Point>)>> { totalPath.Value };
+            }
+
+            if (path == null || !path.Any())
+            {
+                Monitor.Log($"NPC {npc.Name} has no valid path data.", LogLevel.Warn);
+                return;
+            }
 
             string TargetLocation = SwitchTargetLocations ? Game1.player.currentLocation.Name : npc.currentLocation.Name;
 

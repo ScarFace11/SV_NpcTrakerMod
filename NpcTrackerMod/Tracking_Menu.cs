@@ -162,7 +162,7 @@ namespace NpcTrackerMod
             // Обработка нажатия на кнопку выхода
             if (exitButton.containsPoint(x, y)) exitThisMenu();
 
-            HandleArrowButtonClick(x, y);
+            if(DisplayGridCheckbox.isChecked) HandleArrowButtonClick(x, y);
             HandleCheckBoxClick(x, y);
         }
 
@@ -221,7 +221,7 @@ namespace NpcTrackerMod
             // Отображение всех маршрутов
             if (DisplayGridCheckbox.isChecked && SwitchGlobalPathCheckbox.containsPoint(x, y))
             {
-                ToggleCheckBox(SwitchGlobalPathCheckbox, ref NpcTrackerMod.Instance.SwitchGlobalNpcPath);
+                ToggleLoacationChange(SwitchGlobalPathCheckbox, ref NpcTrackerMod.Instance.SwitchGlobalNpcPath);
             }
         }
 
@@ -235,16 +235,56 @@ namespace NpcTrackerMod
         }
 
         /// <summary>
-        /// Переключает состояние отображения всех локаций.
+        /// Переключает состояние отображения всех локаций и обновляет соответствующие данные NPC.
         /// </summary>
+        /// <param name="checkbox">Чекбокс, который отображает текущее состояние.</param>
+        /// <param name="state">Текущее состояние (включено/выключено).</param>
         private void ToggleTargetLocations(ClickableCheckbox checkbox, ref bool state)
         {
+
             state = !state;
             checkbox.isChecked = state;
+
+            // Очищаем информацию о путях NPC
             NpcTrackerMod.Instance.tileStates.Clear();           
             NpcTrackerMod.Instance.SwitchGetNpcPath = true;
+            //NpcTrackerMod.Instance.NpcList.NpcCurrentList.Clear();
+            //NpcTrackerMod.Instance.SwitchListFull = false;
+            if (state)
+            {
+                // Если включено отображение всех локаций, сбрасываем выбранного NPC
+                //NpcTrackerMod.Instance.NpcSelected = 0;
+            }
+            else
+            {
+                // Если отображаются только текущие локации, обновляем список NPC и проверяем текущий выбор
+                //UpdateNpcListForCurrentLocation();
+                //ValidateNpcSelection();
+            }
         }
 
+        /// <summary>
+        /// Обновляет список NPC для текущей локации игрока.
+        /// </summary>
+        private void UpdateNpcListForCurrentLocation()
+        {
+            var currentLocation = Game1.player.currentLocation.Name;
+            NpcTrackerMod.Instance.NpcList.NpcCurrentList = NpcTrackerMod.Instance.NpcList.NpcTotalList
+                .Where(npcName => Game1.currentLocation.characters.Any(npc => npc.Name == npcName))
+                .ToList();
+        }
+
+        /// <summary>
+        /// Проверяет корректность текущего выбора NPC и сбрасывает выбор, если он некорректен.
+        /// </summary>
+        private void ValidateNpcSelection()
+        {
+            if (!NpcTrackerMod.Instance.NpcList.NpcCurrentList.Any() ||
+                NpcTrackerMod.Instance.NpcSelected >= NpcTrackerMod.Instance.NpcList.NpcCurrentList.Count)
+            {
+                NpcTrackerMod.Instance.NpcSelected = 0;
+            }
+        }
         /// <summary>
         /// Переключает состояние выбора NPC.
         /// </summary>
@@ -262,12 +302,20 @@ namespace NpcTrackerMod
                 NpcTrackerMod.Instance.NpcSelected = 0;
             }
         }
+        private void ToggleLoacationChange(ClickableCheckbox checkbox, ref bool state)
+        {
+            state = !state;
+            checkbox.isChecked = state;
 
+            NpcTrackerMod.Instance.tileStates.Clear();
+            NpcTrackerMod.Instance.SwitchGetNpcPath = true;
+
+        }
 
         public class ClickableCheckbox : ClickableComponent
         {
             public bool isChecked;
-            private readonly string label;
+            public string label;
 
             public ClickableCheckbox(Rectangle bounds, string label, bool isChecked)
                 : base(bounds, label)

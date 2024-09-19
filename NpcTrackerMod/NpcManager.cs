@@ -4,6 +4,7 @@ using StardewValley;
 using Microsoft.Xna.Framework;
 using System.Collections.Generic;
 using System.Linq;
+using StardewValley.Pathfinding;
 
 namespace NpcTrackerMod
 {
@@ -16,6 +17,7 @@ namespace NpcTrackerMod
 
         private string LastLocationName;
 
+        
         // <summary>
         /// Инициализирует экземпляр <see cref="NpcManager"/> с указанной ссылкой на мод.
         /// </summary>
@@ -62,33 +64,138 @@ namespace NpcTrackerMod
             var totalNpcPath = new List<(string, List<Point>)>();
             var masterSchedule = npc.getMasterScheduleRawData();
 
+           
             try
             {
+
                 foreach (var schedule in masterSchedule)
                 {
-                    var rawData = schedule.Value;
                     string key = schedule.Key;
+                    var rawData = schedule.Value;               
+
                     //modInstance.Monitor.Log($"Processing schedule key: {key} with data: {rawData}", LogLevel.Debug);
 
                     // Простая проверка на валидность данных
                     if (string.IsNullOrWhiteSpace(key) || !rawData.Contains(" ") ||
                         rawData.Contains("MAIL") || rawData.Contains("GOTO") || rawData.Contains("NO_SCHEDULE") ||
-                        key == "CommunityCenter_Replacement" || key == "JojaMart_Replacement")
+                        key == "CommunityCenter_Replacement" || key == "JojaMart_Replacement" || key == "DesertFestival_3")
                     {
                         //modInstance.Monitor.Log($"Skipping invalid or problematic schedule key: {key}", LogLevel.Warn);
                         continue;
                     }
-                    // Парсинг расписания и добавление маршрутов
+
+                    //modInstance.Monitor.Log($"Выбрано расписание: {key}:{rawData}", LogLevel.Info);
+                    // Парсинг расписания и обработка маршрутов
                     try
                     {
-                        var parsedSchedule = npc.parseMasterSchedule(key, rawData);
-                        var chto = npc.getMasterScheduleEntry(key);
-                        modInstance.Monitor.Log($"Processing schedule key: {chto}", LogLevel.Debug);
+                        //var a = Game1.content.Load<Dictionary<string, string>>("Characters\\schedules\\" + npc.Name)[key].Split('/');
+                        //modInstance.Monitor.Log($"0: {a}", LogLevel.Debug);
+                        //KeyValuePair<int, StardewValley.Pathfinding.SchedulePathDescription> tempshedule = new KeyValuePair<int, SchedulePathDescription>();
+                        //tempshedule = rawData;
 
-                        foreach (var path in parsedSchedule)
+
+
+                        // Разделяем данные расписания по "/"
+                        var scheduleEntries = rawData.Split('/');
+
+                        var lastloc = npc.currentLocation.Name;
+                        var npcX = ((int)Game1.locations.FirstOrDefault(name => name.Name == npc.currentLocation.Name).characters.FirstOrDefault(name => name.Name == npc.Name).TilePoint.X);
+                        var npcY = ((int)Game1.locations.FirstOrDefault(name => name.Name == npc.currentLocation.Name).characters.FirstOrDefault(name => name.Name == npc.Name).TilePoint.Y);
+                        LastLocationName = null;
+
+                        foreach (var entry in scheduleEntries)
                         {
-                            totalNpcPath.AddRange(NpcPathFilter(npc.currentLocation?.Name, path.Value.route));
+                            //modInstance.Monitor.Log($"Начат парсинг пути: {entry}", LogLevel.Info);
+                            // Разделяем по пробелу: "время локация x y ..."
+                            var entryParts = entry.Split(' ');
+
+                            if (entryParts.Length >= 5)
+                            {
+                                // Извлекаем время, направление и поведение в конце маршрута
+                                string time = int.Parse(entryParts[0]).ToString();
+                                string locationName = entryParts[1];
+                                int x = int.Parse(entryParts[2]);
+                                int y = int.Parse(entryParts[3]);
+                                int facingDirection = int.Parse(entryParts[4]);
+
+                                // Добавляем конечное поведение, если оно есть
+                                string endBehavior = entryParts.Length > 5 ? entryParts[5] : null;
+                                string endMessage = entryParts.Length > 6 ? entryParts[6] : null;
+
+                                // Создаём маршрут для NPC
+                                var route = new Stack<Point>();
+                                route.Push(new Point(x, y));
+
+
+                                //var loc = lastloc == " " ? locationName : npc.currentLocation.Name;
+
+                                /*
+                                modInstance.Monitor.Log($"Данные для патч финда", LogLevel.Info);
+                                modInstance.Monitor.Log($"Время(key): {time}", LogLevel.Info);
+                                modInstance.Monitor.Log($"текущая лока: {lastloc}", LogLevel.Info);
+                                modInstance.Monitor.Log($"XY npc: {npcX} {npcY}", LogLevel.Info);
+                                modInstance.Monitor.Log($"локация куда идти: {locationName}", LogLevel.Info);
+                                modInstance.Monitor.Log($"конечный XY: {x} {y}", LogLevel.Info);
+                                modInstance.Monitor.Log($"Направление взгляда: {facingDirection}", LogLevel.Info);
+                                modInstance.Monitor.Log($"endBehavior: {endBehavior}", LogLevel.Info);
+                                modInstance.Monitor.Log($"endMessage: {endMessage}", LogLevel.Info);
+                                */
+
+                                var a = npc.pathfindToNextScheduleLocation(time,
+                                    lastloc,
+                                    npcX,
+                                    npcY,
+                                    locationName,
+                                    x,
+                                    y,
+                                    facingDirection,
+                                    endBehavior,
+                                    endMessage);
+                                //Создаём SchedulePathDescription
+                                //var schedulePath = new SchedulePathDescription(route, facingDirection, endBehavior, endMessage, locationName, new Point(x, y));
+                                //var a = PathFindController.findPathForNPCSchedules(npc.TilePoint, new Point(x, y), location, 1);
+
+                                //modInstance.Monitor.Log($"Pathfind", LogLevel.Info);
+                                //modInstance.Monitor.Log($"Время(key): {a.time}", LogLevel.Info);
+                                //modInstance.Monitor.Log($"локация куда идти: {a.targetLocationName}", LogLevel.Info);
+                                //modInstance.Monitor.Log($"конечный XY: {a.targetTile}", LogLevel.Info);
+                                //modInstance.Monitor.Log($"Направление взгляда: {a.facingDirection}", LogLevel.Info);
+                                //modInstance.Monitor.Log($"endBehavior: {a.endOfRouteBehavior}", LogLevel.Info);
+                                //modInstance.Monitor.Log($"endMessage: {a.endOfRouteMessage}", LogLevel.Info);
+
+
+                                totalNpcPath.AddRange(NpcPathFilter(npc.currentLocation.Name, a.route));
+
+
+                                lastloc = locationName;
+                                npcX = x;
+                                npcY = y;
+                                
+                            }
                         }
+                        //foreach (var i in schedulePath)
+
+                        //var parsedSchedule = npc.parseMasterSchedule(key, rawData).Values;
+                        
+                        //foreach(var item in npc.Schedule)
+                        //{
+                        //    tempshedule.Value.add(item);
+                        //    npc.Schedule.Clear();
+                        //    var a = npc.parseMasterSchedule(key, rawData).Values;
+                            
+                        //}
+                        ////foreach (var s in currentnpc.Schedule)
+                        ////{
+
+                        ////    totalNpcPath.AddRange(NpcPathFilter(npc.currentLocation?.Name, s.Value.route));
+                        ////}
+                        //foreach (var s in parsedSchedule)
+                        //{
+
+                        //    totalNpcPath.AddRange(NpcPathFilter(npc.currentLocation?.Name, s.route));
+                        //}
+                        //npc.Schedule.Add()
+
                     }
                     catch (Exception ex)
                     {
@@ -101,12 +208,12 @@ namespace NpcTrackerMod
             {
                 modInstance.Monitor.Log($"Unexpected error while processing NPC '{npc.Name}': {ex.Message}", LogLevel.Error);
             }
-
+            
             // Сброс последней локации
             LastLocationName = null;
             return totalNpcPath;
         }
-
+        
         /// <summary>
         /// Получает маршруты NPC на текущий день.
         /// </summary>
@@ -168,7 +275,7 @@ namespace NpcTrackerMod
                 // Проверяем, находится ли следующая точка рядом
                 bool isAdjacent = Math.Abs(point.X - CurrentCoordinatePath.X) <= 1 &&
                                   Math.Abs(point.Y - CurrentCoordinatePath.Y) <= 1;
-                //modInstance.Monitor.Log($"location: {LastLocationName}, Предыдущая точка: {CurrentCoordinatePath} Некст точка: {point}", LogLevel.Trace);
+                //modInstance.Monitor.Log($"location: {LastLocationName}, Предыдущая точка: {CurrentCoordinatePath} Некст точка: {point}", LogLevel.Debug);
                 if (isAdjacent)
                 {
                     // Добавляем точку в текущий маршрут
