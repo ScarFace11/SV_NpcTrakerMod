@@ -75,7 +75,7 @@ namespace NpcTrackerMod
             var LocationAndPoint = Global
                 ? modInstance.NpcManager.GetNpcGlobalRoutePoints(npc)
                 : modInstance.NpcManager.GetNpcRoutePoints(npc);
-
+            //modInstance.NpcManager.test(npc);
 
             // Проходим по каждой новой локации и её путям
             foreach (var newLocationAndPoints in LocationAndPoint)
@@ -173,7 +173,7 @@ namespace NpcTrackerMod
                         //if (npc.Name == "Gus")
                         AddNpcPath(npc, NpcTotalToDayPath, false);
 
-                        //if (npc.Name == "Gus") 
+                        //if (npc.Name == "Lewis") 
                         AddNpcPath(npc, NpcTotalGlobalPath, true);                      
                     }                     
                 }

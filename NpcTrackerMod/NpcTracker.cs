@@ -1,19 +1,17 @@
 ﻿using System;
-using StardewModdingAPI.Events;
-using StardewModdingAPI.Utilities;
-using StardewModdingAPI;
-using StardewValley;
-using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using StardewModdingAPI;
+using StardewValley;
 
 namespace NpcTrackerMod
 {
     /// <summary>
     /// Основной класс мода для отслеживания NPC.
     /// </summary>
-    public class NpcTrackerMod : Mod // разобраться в коде, ещё слишком много и лишнего отображается в патче
+    public class NpcTrackerMod : Mod
     {
         public static NpcTrackerMod Instance;
 
@@ -77,7 +75,6 @@ namespace NpcTrackerMod
         public override void Entry(IModHelper helper)
         {
             tileSize = Game1.tileSize;
-
             Instance = this; // Инициализация экземпляра мода
 
             NpcList =       new NpcList(Instance);
@@ -113,26 +110,26 @@ namespace NpcTrackerMod
         /// <param name="cameraOffset">Смещение камеры.</param>
         public void DrawNpcPaths(SpriteBatch spriteBatch, Vector2 cameraOffset)
         {
-            // Получение текущего списка NPC для отслеживания
-            var NpcCurrentList = NpcManager.GetNpcsToTrack(SwitchTargetLocations, NpcList.NpcTotalList);
+            // Получаем текущий список NPC для отслеживания
+            var npcList = NpcManager.GetNpcsToTrack(SwitchTargetLocations, NpcList.NpcTotalList);
 
-            // Проверка NPC и создание пути
-            foreach (var npc in NpcCurrentList.Where(npc => npc != null && !string.IsNullOrWhiteSpace(npc.Name)))
+            // Если нужно отслеживать конкретного NPC
+            if (SwitchTargetNPC && !SwitchListFull)
             {
-                if (SwitchTargetNPC && !SwitchListFull)
-                {
-                    NpcList.NpcAddCurrentList(NpcCurrentList);
-                    NpcList.NpcCurrentList.Sort();
-                    SwitchListFull = true;
-                }
+                NpcList.NpcAddCurrentList(npcList);
+                NpcList.NpcCurrentList.Sort();
+                SwitchListFull = true;
+            }
 
+            foreach (var npc in npcList.Where(n => n != null && !string.IsNullOrWhiteSpace(n.Name)))
+            {
                 if (!SwitchTargetNPC || npc.Name == NpcList.GetNpcFromList())
                 {
                     NpcCreatePath(npc);
                 }
             }
 
-            // Отрисовка плиток
+            // Отрисовка всех плиток
             foreach (var tile in tileStates)
             {
                 Vector2 tilePosition = new Vector2(tile.Key.X * tileSize, tile.Key.Y * tileSize) - cameraOffset;
@@ -141,10 +138,7 @@ namespace NpcTrackerMod
                 DrawTiles.DrawTileHighlight(spriteBatch, tilePosition, color);
             }
 
-            // Сброс флагов
-            
             SwitchGetNpcPath = false;
-           
             DetectPlayerLocation();
         }
 
@@ -192,24 +186,14 @@ namespace NpcTrackerMod
         /// <param name="npc">NPC для отрисовки маршрута.</param>
         private void DrawNpcRoute(NPC npc)
         {
-            string targetLocation;
-
             // Проверка на наличие расписания
-            if (!SwitchGetNpcPath || path == null)
-            {
-                return;
-            }
+            if (!SwitchGetNpcPath) return;
 
-            if (SwitchGlobalNpcPath)
-            {
-                var totalPath = NpcList.NpcTotalGlobalPath.FirstOrDefault(i => i.Key == npc.Name);
-                path = new List<List<(string, List<Point>)>> { totalPath.Value };
-            }
-            else
-            {
-                var totalPath = NpcList.NpcTotalToDayPath.FirstOrDefault(i => i.Key == npc.Name);
-                path = new List<List<(string, List<Point>)>> { totalPath.Value };
-            }
+            var totalPath = SwitchGlobalNpcPath
+                ? NpcList.NpcTotalGlobalPath.FirstOrDefault(i => i.Key == npc.Name)
+                : NpcList.NpcTotalToDayPath.FirstOrDefault(i => i.Key == npc.Name);
+
+            var path = new List<List<(string, List<Point>)>> { totalPath.Value };
 
             if (path == null || !path.Any())
             {
@@ -219,7 +203,7 @@ namespace NpcTrackerMod
 
             string TargetLocation = SwitchTargetLocations ? Game1.player.currentLocation.Name : npc.currentLocation.Name;
 
-            foreach (var globalPoints in path.SelectMany(point => point.Where(np => np.Item1 == TargetLocation)))
+            foreach (var globalPoints in path.SelectMany(p => p.Where(np => np.Item1 == TargetLocation)))
             {
                 foreach (var coord in globalPoints.Item2)
                 {
