@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-
 using StardewModdingAPI;
 using StardewValley;
+using System.IO;
 
 using Microsoft.Xna.Framework;
 
@@ -174,7 +174,9 @@ namespace NpcTrackerMod
                         AddNpcPath(npc, NpcTotalToDayPath, false);
 
                         //if (npc.Name == "Lewis") 
-                        AddNpcPath(npc, NpcTotalGlobalPath, true);                      
+                        AddNpcPath(npc, NpcTotalGlobalPath, true);
+
+
                     }                     
                 }
                 catch (Exception ex)
@@ -187,6 +189,86 @@ namespace NpcTrackerMod
         public string GetNpcFromList()
         {
             return NpcTotalToDayPath.FirstOrDefault(k => k.Key == NpcCurrentList[modInstance.NpcSelected]).Key;
+        }
+
+        public void LoadAllModSchedules()
+        {
+            // Получаем путь к папке, где установлены все моды
+            string modsFolderPath = Path.Combine(modInstance.Helper.DirectoryPath, "..", "..", "Mods");
+
+            // Проверяем, существует ли папка с модами
+            if (!Directory.Exists(modsFolderPath))
+            {
+                modInstance.Monitor.Log("Папка с модами не найдена!", LogLevel.Error);
+                return;
+            }
+
+            // Ищем папки модов
+            var modFolders = Directory.GetDirectories(modsFolderPath);
+
+            foreach (var modFolder in modFolders)
+            {
+                // Рекурсивный поиск папки "Schedules" в каждой папке мода
+                string scheduleFolderPath = FindSchedulesFolder(modFolder);
+                //modInstance.Monitor.Log($"{scheduleFolderPath}", LogLevel.Debug);
+                if (!string.IsNullOrEmpty(scheduleFolderPath))
+                {
+                    // Ищем все файлы расписаний в папке "Schedules"
+                    var scheduleFiles = Directory.GetFiles(scheduleFolderPath, "*.json", SearchOption.AllDirectories);
+
+                    foreach (var scheduleFile in scheduleFiles)
+                    {
+                        try
+                        {
+                            // Загружаем расписание из файла
+                            var schedule = modInstance.Helper.ModContent.Load<Dictionary<string, string>>(scheduleFile);
+
+                            if (schedule != null)
+                            {
+                                //modInstance.Monitor.Log($"Загружено расписание из файла: {scheduleFile}", LogLevel.Info);
+                            }
+                        }
+                        catch
+                        {
+                            //modInstance.Monitor.Log($"Ошибка при загрузке файла расписания: {ex.Message}", LogLevel.Error);
+                            continue;
+                        }
+                    }
+                }
+            }
+        }
+        /// <summary>
+        /// Рекурсивно ищет папку "Schedules" в указанной директории.
+        /// </summary>
+        /// <param name="startDirectory">Путь к корневой папке мода.</param>
+        /// <returns>Путь к найденной папке "Schedules" или пустую строку, если не найдена.</returns>
+        private string FindSchedulesFolder(string startDirectory)
+        {
+            try
+            {
+                // Ищем все директории в текущей папке
+                foreach (var directory in Directory.GetDirectories(startDirectory))
+                {
+                    // Проверяем, является ли текущая папка "Schedules"
+                    if (Path.GetFileName(directory).Equals("Schedules", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return directory; // Возвращаем путь к папке
+                    }
+
+                    // Рекурсивный вызов для вложенных папок
+                    var foundFolder = FindSchedulesFolder(directory);
+                    if (!string.IsNullOrEmpty(foundFolder))
+                    {
+                        return foundFolder;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                modInstance.Monitor.Log($"Ошибка при поиске папки Schedules: {ex.Message}", LogLevel.Error);
+            }
+
+            return string.Empty; // Возвращаем пустую строку, если папка не найдена
         }
     }
 }

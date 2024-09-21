@@ -248,8 +248,8 @@ namespace NpcTrackerMod
             // Очищаем информацию о путях NPC
             NpcTrackerMod.Instance.tileStates.Clear();           
             NpcTrackerMod.Instance.SwitchGetNpcPath = true;
-            //NpcTrackerMod.Instance.NpcList.NpcCurrentList.Clear();
-            //NpcTrackerMod.Instance.SwitchListFull = false;
+            NpcTrackerMod.Instance.NpcList.NpcCurrentList.Clear();
+            NpcTrackerMod.Instance.SwitchListFull = false;
             if (state)
             {
                 // Если включено отображение всех локаций, сбрасываем выбранного NPC
@@ -315,7 +315,6 @@ namespace NpcTrackerMod
         public class ClickableCheckbox : ClickableComponent
         {
             public bool isChecked;
-            public string label;
 
             public ClickableCheckbox(Rectangle bounds, string label, bool isChecked)
                 : base(bounds, label)

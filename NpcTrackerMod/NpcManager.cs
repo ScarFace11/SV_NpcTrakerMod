@@ -90,7 +90,7 @@ namespace NpcTrackerMod
                     {
                         // Разделяем данные расписания по "/"
                         var scheduleEntries = rawData.Split('/');
-                        var lastLocation = npc.currentLocation.Name;
+                        var lastLocation = npc.currentLocation?.Name;
                         var npcLocation = Game1.locations.FirstOrDefault(loc => loc.Name == npc.currentLocation?.Name);
 
                         var npcX = (int)npcLocation.characters.FirstOrDefault(n => n.Name == npc.Name)?.TilePoint.X;
@@ -184,7 +184,7 @@ namespace NpcTrackerMod
                                 lastLocation = locationName;
                                 npcX = x;
                                 npcY = y;
-                                continue; // Переход к следующему расписанию
+                                continue; // Переход к следующему маршруту
                             }
 
                             
@@ -361,6 +361,11 @@ namespace NpcTrackerMod
         /// <param name="LocationName">Название текущей локации.</param>
         /// <param name="ListPoints">Маршрут, который нужно отфильтровать.</param>
         /// <returns>Список пар, где строка — это название локации, а список точек — это сегмент пути NPC.</returns>
+        
+        public void GetModdedNpcSchedule()
+        {
+
+        }
         public List<(string, List<Point>)> NpcPathFilter(string LocationName, Stack<Point> ListPoints) // Отделение пути передвижение, от пути после телепорта
         {
 

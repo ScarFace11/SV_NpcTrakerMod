@@ -60,9 +60,14 @@ namespace NpcTrackerMod
             if (!Context.IsWorldReady) return;
 
             DayStarted = true;
-
+            
             if (!modInstance.LocationSet)
                 modInstance.LocationsList.SetLocations();
+
+            // Загружаем расписание из контента модов
+            //var moddedSchedule = modInstance.Helper.ModContent.Load<Dictionary<string, string>>("Mods/MyMod/Characters/schedules/Abigail", ContentSource.ModFolder);
+
+            
 
             UpdateNpcCount();
             ClearDataForNewDay();
@@ -88,6 +93,7 @@ namespace NpcTrackerMod
             modInstance.tileStates.Clear();
             modInstance.npcPreviousPositions.Clear();
             modInstance.npcTemporaryColors.Clear();
+            
         }
 
         /// <summary>
@@ -105,11 +111,8 @@ namespace NpcTrackerMod
         /// </summary>
         /// <param name="modId">ID мода.</param>
         /// <returns>Возвращает true, если мод установлен, иначе false.</returns>
-        public bool IsModInstalled(string modId)
-        {
-            return modInstance.Helper.ModRegistry.IsLoaded(modId);
-        }
 
+        
         /// <summary>
         /// Отрисовывает сетку и маршруты NPC в мире игры.
         /// </summary>

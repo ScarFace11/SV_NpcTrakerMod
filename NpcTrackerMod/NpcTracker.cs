@@ -90,15 +90,8 @@ namespace NpcTrackerMod
             helper.Events.GameLoop.DayEnding += ModEntry.OnDayEnding;
             //helper.Events.GameLoop.UpdateTicked += ModEntry.OnUpdateTicked;
 
-            // Проверка наличия мода
-            if (ModEntry.IsModInstalled("FlashShifter.StardewValleyExpandedCP"))
-            {
-                Monitor.Log("Мод установлен!", LogLevel.Info);
-            }
-            else
-            {
-                Monitor.Log("Нет мода.", LogLevel.Info);
-            }
+            NpcList.LoadAllModSchedules();
+
         }
 
 
