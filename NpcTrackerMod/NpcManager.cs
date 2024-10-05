@@ -53,13 +53,21 @@ namespace NpcTrackerMod
         /// </summary>
         /// <param name="npc">NPC, для которого требуется получить маршруты.</param>
         /// <returns>Список пар, где строка — это название локации, а список точек — это маршрут NPC.</returns>
-        public List<(string, List<Point>)> GetNpcGlobalRoutePoints(NPC npc)
+        public void GetNpcGlobalRoutePoints(NPC npc = null)
         {
             // Проверяем, есть ли у NPC расписание
-            if (npc.Schedule == null || !npc.Schedule.Any())
+            if (npc != null && ( npc.Schedule == null || !npc.Schedule.Any()))
             {
-                modInstance.Monitor.Log($"NPC {npc.Name} has no schedule.", LogLevel.Warn);
-                return new List<(string, List<Point>)>();
+                //modInstance.Monitor.Log($"NPC {npc.Name} has no schedule.", LogLevel.Warn);
+                return;
+            }
+
+            if (npc == null)
+            {
+                foreach (var currentNpc in modInstance.NpcList.NPClist)
+                {
+
+                }
             }
 
             var totalNpcPath = new List<(string, List<Point>)>();
@@ -80,6 +88,7 @@ namespace NpcTrackerMod
                     if (!IsValidScheduleEntry(key, rawData))
                     {
                         //modInstance.Monitor.Log($"Skipping invalid or problematic schedule key: {key}", LogLevel.Warn);
+                        modInstance.NpcList.AddNpcBlackList(npc.Name);
                         continue;
                     }
 
@@ -185,9 +194,7 @@ namespace NpcTrackerMod
                                 npcX = x;
                                 npcY = y;
                                 continue; // Переход к следующему маршруту
-                            }
-
-                            
+                            }                            
                         }
                     }
                     catch (Exception ex)
@@ -204,7 +211,7 @@ namespace NpcTrackerMod
             
             // Сброс последней локации
             LastLocationName = null;
-            return totalNpcPath;
+            modInstance.NpcList.AddNpcPath(npc, modInstance.NpcList.NpcTotalGlobalPath, totalNpcPath);
         }
 
         /// <summary>
@@ -330,18 +337,20 @@ namespace NpcTrackerMod
             LastLocationName = null;
 
         }
+
         /// <summary>
         /// Получает маршруты NPC на текущий день.
         /// </summary>
         /// <param name="npc">NPC, для которого требуется получить маршруты на день.</param>
         /// <returns>Список пар, где строка — это название локации, а список точек — это маршрут NPC на день.</returns>
-        public List<(string, List<Point>)> GetNpcRoutePoints(NPC npc)
+        public void GetNpcRoutePoints(NPC npc)
         {
             // Проверяем наличие расписания у NPC
             if (npc.Schedule?.Any() != true)
             {
-                modInstance.Monitor.Log($"NPC {npc.Name} has no schedule.", LogLevel.Warn);
-                return new List<(string, List<Point>)>();
+                //modInstance.Monitor.Log($"NPC {npc.Name} has no schedule.", LogLevel.Warn);
+                modInstance.NpcList.AddNpcBlackList(npc.Name);
+                return;
             }
 
             var totalNpcPath = new List<(string, List<Point>)>();
@@ -349,10 +358,11 @@ namespace NpcTrackerMod
             totalNpcPath.AddRange(npc.Schedule
                 .SelectMany(scheduleEntry => NpcPathFilter(npc.currentLocation.Name, scheduleEntry.Value.route))
             );
+            modInstance.NpcList.NpcTotalList.Add(npc.Name);
 
             // Сброс последней локации
             LastLocationName = null;
-            return totalNpcPath;
+            modInstance.NpcList.AddNpcPath(npc, modInstance.NpcList.NpcTotalToDayPath, totalNpcPath);
         }
 
         /// <summary>

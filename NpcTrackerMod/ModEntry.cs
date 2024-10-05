@@ -4,6 +4,7 @@ using StardewModdingAPI.Events;
 using StardewModdingAPI;
 using StardewValley;
 using Microsoft.Xna.Framework;
+using System.Collections.Generic;
 
 
 namespace NpcTrackerMod
@@ -36,9 +37,6 @@ namespace NpcTrackerMod
                 case SButton.G:
                     OpenTrackingMenu();
                     break;
-                case SButton.Z:
-                    LogCurrentLocationWarps();
-                    break;
             }
         }
 
@@ -59,18 +57,18 @@ namespace NpcTrackerMod
         {
             if (!Context.IsWorldReady) return;
 
+
+            ClearDataForNewDay();
+
             DayStarted = true;
             
             if (!modInstance.LocationSet)
                 modInstance.LocationsList.SetLocations();
 
-            // Загружаем расписание из контента модов
-            //var moddedSchedule = modInstance.Helper.ModContent.Load<Dictionary<string, string>>("Mods/MyMod/Characters/schedules/Abigail", ContentSource.ModFolder);
-
             
 
             UpdateNpcCount();
-            ClearDataForNewDay();
+            
         }
 
         /// <summary>
@@ -78,11 +76,7 @@ namespace NpcTrackerMod
         /// </summary>
         private void UpdateNpcCount()
         {
-            int npcCount = Game1.characterData.Count();
-            if (npcCount == modInstance.NpcCount) return;
-
             modInstance.NpcList.CreateTotalAndBlackList();
-            modInstance.NpcCount = npcCount;
         }
 
         /// <summary>
@@ -93,7 +87,15 @@ namespace NpcTrackerMod
             modInstance.tileStates.Clear();
             modInstance.npcPreviousPositions.Clear();
             modInstance.npcTemporaryColors.Clear();
-            
+            modInstance.SwitchGetNpcPath = false;
+
+            modInstance.NpcList.NpcBlackList.Clear();
+            modInstance.NpcList.NpcTotalList.Clear();
+            modInstance.NpcList.NpcCurrentList.Clear();
+            modInstance.NpcList.NpcTotalToDayPath.Clear();
+
+            modInstance.NpcCount = 0;
+
         }
 
         /// <summary>
@@ -105,12 +107,6 @@ namespace NpcTrackerMod
         {
             DayStarted = false;
         }
-
-        /// <summary>
-        /// Проверяет, установлен ли определенный мод по его ID.
-        /// </summary>
-        /// <param name="modId">ID мода.</param>
-        /// <returns>Возвращает true, если мод установлен, иначе false.</returns>
 
         
         /// <summary>
@@ -136,47 +132,7 @@ namespace NpcTrackerMod
             }
         }
 
-        /// <summary>
-        /// Логирует текущие локации и их координаты телепортов.
-        /// </summary>
-        private void LogCurrentLocationWarps()
-        {
-            AllGameLocation();
 
-            modInstance.Monitor.Log($"{Game1.currentLocation.Name}", LogLevel.Info);
-            var warpCoordinates = Game1.currentLocation.warps
-                .Select(warp => $"({warp.X}, {warp.Y})")
-                .ToList();
-            modInstance.Monitor.Log(string.Join(", ", warpCoordinates), LogLevel.Info);
-
-            foreach (var warp in Game1.currentLocation.warps)
-            {
-                modInstance.Monitor.Log($" warp: | X: {warp.X} | Y: {warp.Y} {warp.TargetName}", LogLevel.Debug);
-            }
-            foreach (var dor3 in Game1.currentLocation.doors.Pairs)
-            {
-                foreach (var dor0 in dor3.Value)
-                {
-                    modInstance.Monitor.Log($" doors: {dor0}", LogLevel.Debug);
-                }
-                modInstance.Monitor.Log($" doors: {dor3}", LogLevel.Debug);
-            }
-            foreach (var ch in Game1.characterData.Keys)
-            {
-                modInstance.Monitor.Log($"Keys: {ch}", LogLevel.Debug);
-            }
-        }
-
-        /// <summary>
-        /// Логирует все локации в консоли.
-        /// </summary>
-        private void AllGameLocation()
-        {
-            foreach (var location in Game1.locations)
-            {
-                modInstance.Monitor.Log(location.NameOrUniqueName, LogLevel.Debug);
-            }
-        }
 
         /// <summary>
         /// Обрабатывает обновление по тикам.
@@ -186,11 +142,17 @@ namespace NpcTrackerMod
         public void OnUpdateTicked(object sender, UpdateTickedEventArgs e)
         {
             const int tickRate = 60;
-            const int intervalInSeconds = 5;
+            const int intervalInSeconds = 1;
 
             if (DayStarted && e.IsMultipleOf((uint)(tickRate * intervalInSeconds)))
             {
-                modInstance.Monitor.Log("Апдейт", LogLevel.Debug);
+                //modInstance.Monitor.Log("Апдейт", LogLevel.Debug);
+                if (modInstance.DisplayGrid && (!modInstance.SwitchGlobalNpcPath && !modInstance.SwitchTargetLocations) && (Game1.player.currentLocation.characters.Count() != modInstance.NpcCount))
+                {                  
+                    modInstance.tileStates.Clear();
+                    modInstance.SwitchGetNpcPath = true;
+                    modInstance.NpcCount = Game1.player.currentLocation.characters.Count();
+                }
             }
         }
     }

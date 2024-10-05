@@ -331,6 +331,7 @@ namespace NpcTrackerMod
                 if (NpcTrackerMod.Instance.DisplayGrid || BoxName == "Grid")
                 {
                     b.Draw(texture, new Vector2(bounds.X, bounds.Y), sourceRect, Color.White, 0f, Vector2.Zero, 5f, SpriteEffects.None, 0.4f);
+                    
                 }
                 else if (BoxName != "Grid")
                 {

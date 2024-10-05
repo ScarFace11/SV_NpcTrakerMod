@@ -1,10 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using StardewModdingAPI;
 using StardewValley;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace NpcTrackerMod
 {
@@ -13,37 +13,39 @@ namespace NpcTrackerMod
     /// </summary>
     public class NpcTrackerMod : Mod
     {
-        public static NpcTrackerMod Instance;
+        public static NpcTrackerMod Instance { get; private set; }
 
-        public Draw_Tiles DrawTiles;
-        public NpcList NpcList;
-        public NpcManager NpcManager;
-        public ModEntry ModEntry;
-        public LocationsList LocationsList;
+        public Draw_Tiles DrawTiles { get; private set; }
+        public NpcList NpcList { get; private set; }
+        public NpcManager NpcManager { get; private set; }
+        public ModEntry ModEntry { get; private set; }
+        public LocationsList LocationsList { get; private set; }
+        public CustomNpcPaths CustomNpcPaths { get; private set; }
 
         /// <summary> Флаг отображения сетки. </summary>
         public bool DisplayGrid;
 
         /// <summary> Флаг установки локаций. </summary>
-        public bool LocationSet = false;
+        public bool LocationSet { get; set; } = false;
 
         /// <summary>Флаг полного списка NPC. </summary>
-        public bool SwitchListFull;
+        public bool SwitchListFull = false;
 
         /// <summary> Переключает между отслеживанием всех NPC или конкретного NPC. </summary>
-        public bool SwitchTargetNPC = false;
+        public bool SwitchTargetNPC  = false;
 
         /// <summary> Флаг получения пути NPC. </summary>
-        public bool SwitchGetNpcPath { get; set; } = true;
+        public bool SwitchGetNpcPath = true;
 
         /// <summary> Флаг отображения глобального пути NPC. </summary>
         public bool SwitchGlobalNpcPath = false;
 
         /// <summary> Переключает отслеживание всех локаций или только текущей локации игрока. </summary>
-        public bool SwitchTargetLocations;
+        public bool SwitchTargetLocations = false;
+
 
         /// <summary> Количество NPC. </summary>
-        public int NpcCount = 0;
+        public int NpcCount { get; set; } = 0;
 
         /// <summary> Выбранный NPC. </summary>
         public int NpcSelected { get; set; } = 0;
@@ -58,7 +60,7 @@ namespace NpcTrackerMod
         public Dictionary<Point, Color> npcTemporaryColors = new Dictionary<Point, Color>();
 
         /// <summary> Список путей и локаций. </summary>
-        public List<List<(string, List<Point>)>> path = new List<List<(string, List<Point>)>>();
+        private readonly List<List<(string, List<Point>)>> _path = new List<List<(string, List<Point>)>>();
 
 
         /// <summary> Предыдущая локация игрока. </summary>
@@ -74,27 +76,33 @@ namespace NpcTrackerMod
         /// <param name="helper">Справочник помощника мода.</param>
         public override void Entry(IModHelper helper)
         {
+            
+
             tileSize = Game1.tileSize;
             Instance = this; // Инициализация экземпляра мода
 
-            NpcList =       new NpcList(Instance);
-            ModEntry =      new ModEntry(Instance);           
-            DrawTiles =     new Draw_Tiles(Instance, tileSize);
-            NpcManager =    new NpcManager(Instance);
+            NpcList = new NpcList(Instance);
+            ModEntry = new ModEntry(Instance);
+            DrawTiles = new Draw_Tiles(Instance, tileSize);
+            NpcManager = new NpcManager(Instance);
             LocationsList = new LocationsList(Instance);
-            
+            CustomNpcPaths = new CustomNpcPaths(Instance);
+
             // Подписка на события
             helper.Events.GameLoop.DayStarted += ModEntry.OnDayStarted;
-            helper.Events.Input.ButtonPressed += ModEntry.OnButtonPressed;            
-            helper.Events.Display.RenderedWorld += ModEntry.OnRenderedWorld;            
+            helper.Events.Input.ButtonPressed += ModEntry.OnButtonPressed;
+            helper.Events.Display.RenderedWorld += ModEntry.OnRenderedWorld;
             helper.Events.GameLoop.DayEnding += ModEntry.OnDayEnding;
-            //helper.Events.GameLoop.UpdateTicked += ModEntry.OnUpdateTicked;
+            helper.Events.GameLoop.UpdateTicked += ModEntry.OnUpdateTicked;
 
-            NpcList.LoadAllModSchedules();
+            CustomNpcPaths.LoadAllModSchedules();
 
         }
 
-
+        private interface IContentPatcherAPI
+        {
+            void RegisterToken(IManifest mod, string name, Func<IEnumerable<string>> getValue);
+        }
 
         /// <summary>
         /// Отрисовывает пути NPC.
@@ -188,9 +196,9 @@ namespace NpcTrackerMod
 
             var path = new List<List<(string, List<Point>)>> { totalPath.Value };
 
-            if (path == null || !path.Any())
+            if (!path.Any())
             {
-                Monitor.Log($"NPC {npc.Name} has no valid path data.", LogLevel.Warn);
+                Monitor.Log($"NPC {npc.Name} не имеет действительных данных о пути.", LogLevel.Warn);
                 return;
             }
 
@@ -215,6 +223,7 @@ namespace NpcTrackerMod
                 tileStates.Clear();
                 previousLocationName = Game1.player.currentLocation.Name;
                 SwitchGetNpcPath = true;
+                NpcCount = Game1.player.currentLocation.characters.Count();
             }
         }
     }
