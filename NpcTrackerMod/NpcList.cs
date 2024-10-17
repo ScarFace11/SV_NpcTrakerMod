@@ -100,8 +100,7 @@ namespace NpcTrackerMod
 
                     modInstance.Monitor.Log($"Добавлены новые координаты в локацию {newLocationAndPoints.Item1} для NPC {npc.Name}", LogLevel.Trace);
                 }
-            }
-            
+            }           
         }
 
 
@@ -157,34 +156,43 @@ namespace NpcTrackerMod
                 .SelectMany(location => location.characters)
                 .Where(npc => npc != null) // Отфильтровываем возможные null значения
                 .ToList(); // Преобразуем в список
-           
+
             //if (!FullGlobalList)
-            //    modInstance.CustomNpcPaths.LoadAllModSchedules();
+            //    modInstance.CustomNpcPaths.TransferPath();
+
+            //foreach (var x in NpcTotalGlobalPath)
+            //{
+            //    if (x.Key == "Andy")
+            //    {
+            //        modInstance.Monitor.Log($"NPC: {x.Key}", LogLevel.Debug);
+            //        foreach (var y in x.Value)
+            //        {
+            //            modInstance.Monitor.Log($"Location: {y.Item1}", LogLevel.Debug);
+            //        }
+            //    }
+            //}
 
             foreach (var npc in NPClist)
-            {
-                
+            {               
                 try
                 {
                     modInstance.NpcManager.GetNpcRoutePoints(npc);
 
-                    if (!FullGlobalList)
-                        modInstance.NpcManager.GetNpcGlobalRoutePoints(npc);    
-                    
+                    if (!FullGlobalList )//&& npc.Name == "Sophia")
+                        modInstance.NpcManager.GetNpcGlobalRoutePoints(npc, null, null, null);
                 }
                 catch (Exception ex)
                 {
                     modInstance.Monitor.Log($"Ошибка обработки NPC {npc.Name}: {ex.Message}", LogLevel.Warn);
                 }
-            }
+            }         
             FullGlobalList = true;
+            
         }
 
         public string GetNpcFromList()
         {
             return NpcTotalToDayPath.FirstOrDefault(k => k.Key == NpcCurrentList[modInstance.NpcSelected]).Key;
-        }
-
-        
+        } 
     }
 }

@@ -309,6 +309,14 @@ namespace NpcTrackerMod
 
             NpcTrackerMod.Instance.tileStates.Clear();
             NpcTrackerMod.Instance.SwitchGetNpcPath = true;
+            //foreach( var x in NpcTrackerMod.Instance.NpcList.NpcTotalGlobalPath)
+            //{
+            //    NpcTrackerMod.Instance.Monitor.Log($"{x.Key}", LogLevel.Debug);
+            //    foreach (var j in x.Value)
+            //    {
+            //        NpcTrackerMod.Instance.Monitor.Log($"{j.Item1} ", LogLevel.Debug);
+            //    }
+            //}
 
         }
 

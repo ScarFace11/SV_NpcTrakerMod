@@ -18,7 +18,7 @@ namespace NpcTrackerMod
 
         private string LastLocationName;
 
-        
+
         // <summary>
         /// Инициализирует экземпляр <see cref="NpcManager"/> с указанной ссылкой на мод.
         /// </summary>
@@ -53,46 +53,58 @@ namespace NpcTrackerMod
         /// </summary>
         /// <param name="npc">NPC, для которого требуется получить маршруты.</param>
         /// <returns>Список пар, где строка — это название локации, а список точек — это маршрут NPC.</returns>
-        public void GetNpcGlobalRoutePoints(NPC npc = null)
+        public void GetNpcGlobalRoutePoints(NPC CurrentNPC, string NpcName, string path, string pathkey)
         {
-            // Проверяем, есть ли у NPC расписание
-            if (npc != null && ( npc.Schedule == null || !npc.Schedule.Any()))
+            NPC npc = CurrentNPC ?? FindNpcByName(NpcName);
+
+            // Проверяем, существует ли NPC
+            if (npc == null)
             {
-                //modInstance.Monitor.Log($"NPC {npc.Name} has no schedule.", LogLevel.Warn);
+                modInstance.Monitor.Log($"NPC {NpcName} не найден.", LogLevel.Warn);
                 return;
             }
 
-            if (npc == null)
-            {
-                foreach (var currentNpc in modInstance.NpcList.NPClist)
-                {
+            Dictionary<string, string> masterSchedule = new Dictionary<string, string>();
 
-                }
+            masterSchedule = GetMasterSchedule(npc, path, pathkey);
+
+            //if (CurrentNPC != null)
+            //{
+            //    masterSchedule = npc.getMasterScheduleRawData();
+            //}
+            //else
+            //{
+            //    masterSchedule[pathkey] = path;
+            //}
+
+            if (!modInstance.NpcList.NpcTotalList.Contains(npc.Name))
+            {
+                modInstance.NpcList.NpcTotalList.Add(npc.Name);
             }
 
             var totalNpcPath = new List<(string, List<Point>)>();
-            var masterSchedule = npc.getMasterScheduleRawData();
 
-           
+
             try
             {
 
                 foreach (var schedule in masterSchedule)
                 {
                     string key = schedule.Key;
-                    var rawData = schedule.Value;               
-
-                    //modInstance.Monitor.Log($"Processing schedule key: {key} with data: {rawData}", LogLevel.Debug);
-
+                    var rawData = schedule.Value;
+                    //modInstance.Monitor.Log($"{npc.Name} rawData: {rawData}", LogLevel.Info);
                     // Пропускаем некорректные или нежелательные данные расписания
                     if (!IsValidScheduleEntry(key, rawData))
                     {
-                        //modInstance.Monitor.Log($"Skipping invalid or problematic schedule key: {key}", LogLevel.Warn);
-                        modInstance.NpcList.AddNpcBlackList(npc.Name);
+                        if (!rawData.Contains("GOTO"))
+                        {
+                            modInstance.Monitor.Log($"У НПС {npc.Name} пропуск неверного или проблемного ключа расписания: {key}", LogLevel.Warn);
+                            modInstance.Monitor.Log($"{rawData}", LogLevel.Debug);
+                        }
                         continue;
                     }
 
-                    //modInstance.Monitor.Log($"Выбрано расписание: {key}:{rawData}", LogLevel.Info);
+                    //modInstance.Monitor.Log($"Выбрано расписание: {key}:{rawData}", LogLevel.Debug);
 
                     // Парсинг расписания и обработка маршрутов
                     try
@@ -102,57 +114,97 @@ namespace NpcTrackerMod
                         var lastLocation = npc.currentLocation?.Name;
                         var npcLocation = Game1.locations.FirstOrDefault(loc => loc.Name == npc.currentLocation?.Name);
 
-                        var npcX = (int)npcLocation.characters.FirstOrDefault(n => n.Name == npc.Name)?.TilePoint.X;
-                        var npcY = (int)npcLocation.characters.FirstOrDefault(n => n.Name == npc.Name)?.TilePoint.Y;
+                        if (npcLocation == null)
+                        {
+                            modInstance.Monitor.Log($"Не известно где находится нпс", LogLevel.Warn);
+                            return;
+                        }
+
+                        int npcX = (int)npcLocation.characters.FirstOrDefault(n => n.Name == npc.Name)?.TilePoint.X;
+                        int npcY = (int)npcLocation.characters.FirstOrDefault(n => n.Name == npc.Name)?.TilePoint.Y;
 
                         LastLocationName = null;
 
+                        bool first = false;
+                        //if (key == "DesertFestival_3") first = true;
 
                         foreach (var entry in scheduleEntries)
                         {
-                            //modInstance.Monitor.Log($"Начат парсинг пути: {entry}", LogLevel.Info);
+                            //modInstance.Monitor.Log($"0) Начат парсинг пути: {entry}", LogLevel.Info);
+
                             // Разделяем по пробелу: "время локация x y ..."
-                            var entryParts = entry.Split(' ');
+                            string[] entryParts = entry.Split(' ');
 
+                            
                             // Проверяем минимальное количество полей
-                            if (entryParts.Length < 5)
-                                continue;
-
-                            // Извлекаем время, направление и поведение в конце маршрута
-                            string time = Regex.Match(entryParts[0], @"\d+").Value;
-                            string locationName = entryParts[1];
-                            int x = int.Parse(entryParts[2]);
-                            int y = int.Parse(entryParts[3]);
-
-                            int facingDirection;
-                            string endBehavior = null;
-
-                            if (!Int32.TryParse(entryParts[4], out facingDirection))
-                            {
-                                endBehavior = entryParts[4];
-                            }
-                            else if (entryParts.Length > 5)
-                            {
-                                endBehavior = entryParts[5];
-                            }
-                            //int facingDirection = int.Parse(entryParts[4]);
-
-                            // Добавляем конечное поведение, если оно есть                          
-                            string endMessage = entryParts.Length > 6 ? entryParts[6] : null;
+                            if (entryParts.Length < 5) continue;
 
 
-                            //modInstance.Monitor.Log($"Данные для патч финда", LogLevel.Info);
-                            //modInstance.Monitor.Log($"Время(key): {time}", LogLevel.Info);
-                            //modInstance.Monitor.Log($"текущая лока: {lastLocation}", LogLevel.Info);
-                            //modInstance.Monitor.Log($"XY npc: {npcX} {npcY}", LogLevel.Info);
-                            //modInstance.Monitor.Log($"локация куда идти: {locationName}", LogLevel.Info);
-                            //modInstance.Monitor.Log($"конечный XY: {x} {y}", LogLevel.Info);
-                            //modInstance.Monitor.Log($"Направление взгляда: {facingDirection}", LogLevel.Info);
-                            //modInstance.Monitor.Log($"endBehavior: {endBehavior}", LogLevel.Info);
-                            //modInstance.Monitor.Log($"endMessage: {endMessage}", LogLevel.Info);
+                            dasd(entryParts, entry, masterSchedule, out string time, out string locationName, out int x, out int y, out int facingDirection, out string endBehavior, out string endMessage);
+
+                            //modInstance.Monitor.Log($"{time} {locationName} {x} {y} {facingDirection} {endBehavior} {endMessage}",LogLevel.Debug);
+
+
+                            var location = Game1.locations.FirstOrDefault(loc => loc.Name == locationName);
+
+                            //if (location == null)
+                            //{
+
+
+                            //    // Разбиваем текущее расписание на части
+                            //    var mainParts = entry.Split(' ');
+                            //    bool locationFound = false;
+
+                            //    // Поиск альтернативной локации по координатам
+                            //    foreach (var tempSchedule in masterSchedule)
+                            //    {
+                            //        var tempEntries = tempSchedule.Value.Split('/');
+
+                            //        foreach (var keyValue in tempEntries)
+                            //        {
+                            //            var tempParts = keyValue.Split(' ');
+
+                            //            if (tempParts.Length > 3 && mainParts.Contains(tempParts[2]) && mainParts.Contains(tempParts[3]))
+                            //            {
+                            //                var potentialLocation = Game1.locations.FirstOrDefault(loc => loc.Name == tempParts[1]);
+
+                            //                if (potentialLocation != null)
+                            //                {
+                            //                    locationName = tempParts[1];
+                            //                    modInstance.Monitor.Log($"Локация изменена на: {tempParts[1]}", LogLevel.Info);
+                            //                    locationFound = true;
+                            //                    shift = 1;
+                            //                    break;
+                            //                }
+                            //                else
+                            //                {
+                            //                    modInstance.Monitor.Log($"Не удалось найти локацию за место: '{locationName}'", LogLevel.Warn);
+                            //                    return;
+                            //                }
+                            //            }
+                            //        }
+
+                            //        if (locationFound) break; // Если найдена подходящая локация, выходим из цикла
+                            //    }
+
+                            //    // Если не удалось найти подходящую локацию
+                            //    if (!locationFound)
+                            //    {
+                            //        modInstance.Monitor.Log($"Не удалось найти альтернативную локацию для {locationName}", LogLevel.Warn);
+                            //    }
+                            //}
+
+
+
+
+                            if (first) MessageRoute("1) Данные для патч финда", Convert.ToInt32(time), new Point(npcX, npcY), locationName, new Point(x, y), facingDirection, endBehavior, endMessage);
 
                             try
                             {
+                                //modInstance.Monitor.Log($"{key}", LogLevel.Debug);
+
+                                if (first) modInstance.Monitor.Log($"2) Попытка найти путь от {lastLocation} ({npcX}, {npcY}) к {locationName} ({x}, {y}) для NPC '{npc.Name}'", LogLevel.Debug);
+
                                 var pathDescription = npc.pathfindToNextScheduleLocation(
                                                                 time,
                                                                 lastLocation,
@@ -165,21 +217,44 @@ namespace NpcTrackerMod
                                                                 endBehavior,
                                                                 endMessage
                                                                 );
+                                if (first)
+                                {
+                                    MessageRoute("3) Pathfinding", pathDescription.time, new Point(npcX, npcY), pathDescription.targetLocationName, pathDescription.targetTile, pathDescription.facingDirection, pathDescription.endOfRouteBehavior, pathDescription.endOfRouteMessage);
 
-                                //modInstance.Monitor.Log($"Pathfind", LogLevel.Info);
-                                //modInstance.Monitor.Log($"Время(key): {pathDescription.time}", LogLevel.Info);
-                                //modInstance.Monitor.Log($"локация куда идти: {pathDescription.targetLocationName}", LogLevel.Info);
-                                //modInstance.Monitor.Log($"конечный XY: {pathDescription.targetTile}", LogLevel.Info);
-                                //modInstance.Monitor.Log($"Направление взгляда: {pathDescription.facingDirection}", LogLevel.Info);
-                                //modInstance.Monitor.Log($"endBehavior: {pathDescription.endOfRouteBehavior}", LogLevel.Info);
-                                //modInstance.Monitor.Log($"endMessage: {pathDescription.endOfRouteMessage}", LogLevel.Info);
+                                    modInstance.Monitor.Log($"path: {pathDescription.time} {pathDescription.targetLocationName} {pathDescription.targetTile} {pathDescription.facingDirection} {pathDescription.endOfRouteBehavior} {pathDescription.endOfRouteMessage}", LogLevel.Debug);
+                                    if (pathDescription.route == null)
+                                    {
+                                        modInstance.Monitor.Log($"пути нет", LogLevel.Debug);
 
-                                //foreach (var item in pathDescription.route)
-                                //{
-                                //    modInstance.Monitor.Log($"{item}", LogLevel.Debug);
-                                //}
+                                    }
+                                    //else
+                                    //{
+                                    //    foreach (var ssa in pathDescription.route)
+                                    //    {
+                                    //        modInstance.Monitor.Log($"({ssa.X} {ssa.Y})", LogLevel.Debug);
+                                    //    }
+                                    //}
+
+                                    first = false;
+                                }
+                                //MessageRoute("3) Pathfinding", pathDescription.time, new Point(npcX, npcY), pathDescription.targetLocationName, pathDescription.targetTile, pathDescription.facingDirection, pathDescription.endOfRouteBehavior, pathDescription.endOfRouteMessage);
+
+                                // Логирование успешного поиска пути
+
+
+                                //modInstance.Monitor.Log($"4) Pathfinding успешно завершен для {npc.Name}: {pathDescription.targetLocationName} -> {pathDescription.targetTile}", LogLevel.Debug);
+
                                 // Добавляем отфильтрованный маршрут в общий список
-                                totalNpcPath.AddRange(NpcPathFilter(npc.currentLocation?.Name, pathDescription.route));
+                                if (pathDescription.route != null)
+                                {
+
+
+                                    totalNpcPath.AddRange(NpcPathFilter(npc.currentLocation?.Name, pathDescription.route));
+                                }
+                                else
+                                {
+                                    modInstance.Monitor.Log($"Путь {entry} пуст", LogLevel.Warn);
+                                }
 
                                 // Обновляем текущие координаты NPC и локацию
                                 lastLocation = locationName;
@@ -188,13 +263,15 @@ namespace NpcTrackerMod
                             }
                             catch (Exception ex)
                             {
-                                modInstance.Monitor.Log($"Skip route '{time}':{locationName} XY:{x} {y} for NPC '{npc.Name}': {ex.Message}", LogLevel.Trace);
+                                modInstance.Monitor.Log($"Ошибка при поиске маршурта от {lastLocation} XY {npcX} {npcY} до '{time}':{locationName} XY:{x} {y} для '{npc.Name}': {ex.Message}", LogLevel.Error);
+
 
                                 lastLocation = locationName;
                                 npcX = x;
                                 npcY = y;
+
                                 continue; // Переход к следующему маршруту
-                            }                            
+                            }
                         }
                     }
                     catch (Exception ex)
@@ -208,10 +285,111 @@ namespace NpcTrackerMod
             {
                 modInstance.Monitor.Log($"Unexpected error while processing NPC '{npc.Name}': {ex.Message}", LogLevel.Error);
             }
-            
-            // Сброс последней локации
-            LastLocationName = null;
+
+            LastLocationName = null; // Сброс последней локации
             modInstance.NpcList.AddNpcPath(npc, modInstance.NpcList.NpcTotalGlobalPath, totalNpcPath);
+        }
+
+        private NPC FindNpcByName(string npcName)
+        {
+            return modInstance.NpcList.NPClist.FirstOrDefault(npc => npc.Name.IndexOf(npcName, StringComparison.OrdinalIgnoreCase) >= 0);
+        }
+
+        private Dictionary<string, string> GetMasterSchedule(NPC npc, string path, string pathKey)
+        {
+            if (npc.Schedule != null && npc.Schedule.Any())
+            {
+                return npc.getMasterScheduleRawData();
+            } // оказывается модовые npc отображаются и вызывается этот метод из кастомнпспатча 
+            else
+            {
+
+                var schedule = new Dictionary<string, string>();
+                schedule[pathKey] = path;
+
+                return schedule;
+            }
+        }
+
+        private void dasd(string[] entryParts, string entry, Dictionary<string,string> masterSchedule, out string time, out string locationName, out int x, out int y, out int facingDirection, out string endBehavior, out string endMessage)
+        {
+            int shift = 0;
+            // Извлекаем время, направление и поведение в конце маршрута
+            time = Regex.Match(entryParts[0], @"\d+").Value;
+
+            
+            string locationEntry = entryParts[1];
+            bool LocationIsString = int.TryParse(locationEntry, out _);
+            
+
+            if (LocationIsString)
+            {
+                locationEntry = TryParseLocation(locationEntry, entry, masterSchedule);
+                locationName = locationEntry;
+                shift += 1;
+            }
+            else
+            {
+                locationName = entryParts[1];
+            }
+
+            x = int.Parse(entryParts[2 - shift]);
+            y = int.Parse(entryParts[3 - shift]);
+
+            if (!int.TryParse(entryParts[4 - shift], out facingDirection))
+            {
+                facingDirection = 2; // Использовать 2 как значение по умолчанию
+            }
+
+            // Добавляем конечное поведение, если оно есть  
+            endBehavior = entryParts.Length > 5 - shift ? entryParts[5 - shift] : null;
+            endMessage = entryParts.Length > 6 - shift ? entryParts[6 - shift] : null;
+        }
+
+        private string TryParseLocation(string locationName, string entry, Dictionary<string, string> masterSchedule)
+        {
+            
+
+            // Разбиваем текущее расписание на части
+            var mainParts = entry.Split(' ');
+
+            // Поиск альтернативной локации по координатам
+            foreach (var tempSchedule in masterSchedule)
+            {
+                var tempEntries = tempSchedule.Value.Split('/');
+
+                foreach (var keyValue in tempEntries)
+                {
+                    var tempParts = keyValue.Split(' ');
+
+                    if (tempParts.Length > 3 && mainParts.Contains(tempParts[2]) && mainParts.Contains(tempParts[3]))
+                    {
+                        var potentialLocation = Game1.locations.FirstOrDefault(loc => loc.Name == tempParts[1]);
+
+                        if (potentialLocation != null)
+                        {
+                            modInstance.Monitor.Log($"Локация изменена на: {tempParts[1]}", LogLevel.Info);
+                            return tempParts[1];
+                        }
+                    }
+                }
+            }
+
+            // Если не удалось найти подходящую локацию          
+            modInstance.Monitor.Log($"Не удалось найти альтернативную локацию для {locationName}", LogLevel.Warn);
+            return null;
+        }
+            
+        private void MessageRoute(string info, int time, Point NpcTile, string targetLocationName, Point targetTile, int facingDirection, string endOfRouteBehavior, string endOfRouteMessage)
+        {
+            modInstance.Monitor.Log($"{info}", LogLevel.Info);
+            modInstance.Monitor.Log($"Время(key): {time}", LogLevel.Info);
+            if(NpcTile != null || NpcTile.X != 0) modInstance.Monitor.Log($"корды нпс: {NpcTile.X} {NpcTile.Y}", LogLevel.Info);
+            modInstance.Monitor.Log($"локация куда идти: {targetLocationName}", LogLevel.Info);
+            modInstance.Monitor.Log($"конечный XY: {targetTile}", LogLevel.Info);
+            modInstance.Monitor.Log($"Направление взгляда: {facingDirection}", LogLevel.Info);
+            modInstance.Monitor.Log($"endBehavior: {endOfRouteBehavior}", LogLevel.Info);
+            modInstance.Monitor.Log($"endMessage: {endOfRouteMessage}", LogLevel.Info);
         }
 
         /// <summary>
@@ -224,8 +402,13 @@ namespace NpcTrackerMod
         {
             return !string.IsNullOrWhiteSpace(key) && rawData.Contains(" ") &&
                    !rawData.Contains("MAIL") && !rawData.Contains("GOTO") && !rawData.Contains("NO_SCHEDULE") &&
-                   key != "CommunityCenter_Replacement" && key != "JojaMart_Replacement" && key != "DesertFestival_3";
+                   key != "CommunityCenter_Replacement" && key != "JojaMart_Replacement";
+
+            //return !string.IsNullOrWhiteSpace(key) && rawData.Contains(" ") &&
+            //       !rawData.Contains("MAIL") && !rawData.Contains("GOTO") && !rawData.Contains("NO_SCHEDULE") &&
+            //       key != "CommunityCenter_Replacement" && key != "JojaMart_Replacement" && key != "DesertFestival_3";
         }
+
         public void test(NPC npc)
         {
             // Проверяем, есть ли у NPC расписание
@@ -370,12 +553,7 @@ namespace NpcTrackerMod
         /// </summary>
         /// <param name="LocationName">Название текущей локации.</param>
         /// <param name="ListPoints">Маршрут, который нужно отфильтровать.</param>
-        /// <returns>Список пар, где строка — это название локации, а список точек — это сегмент пути NPC.</returns>
-        
-        public void GetModdedNpcSchedule()
-        {
-
-        }
+        /// <returns>Список пар, где строка — это название локации, а список точек — это сегмент пути NPC.</returns>    
         public List<(string, List<Point>)> NpcPathFilter(string LocationName, Stack<Point> ListPoints) // Отделение пути передвижение, от пути после телепорта
         {
 
@@ -407,7 +585,7 @@ namespace NpcTrackerMod
                 bool isAdjacent = Math.Abs(point.X - CurrentCoordinatePath.X) <= 1 &&
                                   Math.Abs(point.Y - CurrentCoordinatePath.Y) <= 1;
 
-                //modInstance.Monitor.Log($"location: {LastLocationName}, Предыдущая точка: {CurrentCoordinatePath} Некст точка: {point}", LogLevel.Debug);
+                //smodInstance.Monitor.Log($"location: {LastLocationName}, Предыдущая точка: {CurrentCoordinatePath} Некст точка: {point}", LogLevel.Debug);
 
                 if (isAdjacent)
                 {
@@ -417,6 +595,8 @@ namespace NpcTrackerMod
                 }
                 else
                 {
+                    //modInstance.LocationsList.LocationsTeleportCord[LastLocationName].FirstOrDefault(x => x.);
+
                     // Если точка не рядом, заканчиваем текущий сегмент и начинаем новый
                     TotalNpcPath.Add((LastLocationName, NpcCurrentPath));
                     NpcCurrentPath = new List<Point>(); // очищаем текущий маршрут
@@ -426,9 +606,7 @@ namespace NpcTrackerMod
 
                     // Начинаем новый сегмент маршрута
                     CurrentCoordinatePath = point;
-
                 }
-
             }
             // Добавляем последний сегмент маршрута
             if (NpcCurrentPath.Count > 0)
@@ -436,7 +614,6 @@ namespace NpcTrackerMod
                 TotalNpcPath.Add((LastLocationName, NpcCurrentPath));
             }
             return TotalNpcPath;
-
         }
     }
 }

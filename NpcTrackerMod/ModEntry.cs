@@ -37,9 +37,42 @@ namespace NpcTrackerMod
                 case SButton.G:
                     OpenTrackingMenu();
                     break;
+                case SButton.Z:
+                    LogCurrentLocationWarps();
+                    break;
             }
         }
 
+        private void LogCurrentLocationWarps()
+        {
+            //AllGameLocation();
+
+            modInstance.Monitor.Log($"{Game1.currentLocation.Name}", LogLevel.Info);
+            var warpCoordinates = Game1.currentLocation.warps
+                .Select(warp => $"({warp.X}, {warp.Y})")
+                .ToList();
+            //modInstance.Monitor.Log(string.Join(", ", warpCoordinates), LogLevel.Info);
+
+            foreach (var warp in Game1.currentLocation.warps)
+            {
+                modInstance.Monitor.Log($" warp: | X: {warp.X}\t Y: {warp.Y}\t | {warp.TargetName}", LogLevel.Debug);
+            }
+            foreach (var dor3 in Game1.currentLocation.doors.Pairs)
+            {
+                modInstance.Monitor.Log($" doors: {dor3}", LogLevel.Debug);
+            }
+            //foreach (var ch in Game1.characterData.Keys)
+            //{
+            //    modInstance.Monitor.Log($"character Keys: {ch}", LogLevel.Debug);
+            //}
+        }
+        private void AllGameLocation()
+        {
+            foreach (var location in Game1.locations)
+            {
+                modInstance.Monitor.Log(location.NameOrUniqueName, LogLevel.Debug);
+            }
+        }
         /// <summary>
         /// Открывает меню отслеживания NPC.
         /// </summary>

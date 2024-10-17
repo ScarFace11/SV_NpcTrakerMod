@@ -43,7 +43,6 @@ namespace NpcTrackerMod
         /// <summary> Переключает отслеживание всех локаций или только текущей локации игрока. </summary>
         public bool SwitchTargetLocations = false;
 
-
         /// <summary> Количество NPC. </summary>
         public int NpcCount { get; set; } = 0;
 
@@ -95,7 +94,7 @@ namespace NpcTrackerMod
             helper.Events.GameLoop.DayEnding += ModEntry.OnDayEnding;
             helper.Events.GameLoop.UpdateTicked += ModEntry.OnUpdateTicked;
 
-            CustomNpcPaths.LoadAllModSchedules();
+            //CustomNpcPaths.LoadAllModSchedules();
 
         }
 
@@ -196,6 +195,9 @@ namespace NpcTrackerMod
 
             var path = new List<List<(string, List<Point>)>> { totalPath.Value };
 
+
+
+
             if (!path.Any())
             {
                 Monitor.Log($"NPC {npc.Name} не имеет действительных данных о пути.", LogLevel.Warn);
@@ -203,7 +205,6 @@ namespace NpcTrackerMod
             }
 
             string TargetLocation = SwitchTargetLocations ? Game1.player.currentLocation.Name : npc.currentLocation.Name;
-
             foreach (var globalPoints in path.SelectMany(p => p.Where(np => np.Item1 == TargetLocation)))
             {
                 foreach (var coord in globalPoints.Item2)

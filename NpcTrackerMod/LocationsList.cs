@@ -17,7 +17,6 @@ namespace NpcTrackerMod
         {
             this.modInstance = instance;
         }
-        List<(Point, string)> TeleportedCord = new List<(Point, string)>();
 
         public List<(string, List<Point>)> LocationsPaths = new List<(string, List<Point>)>();
 
@@ -36,7 +35,13 @@ namespace NpcTrackerMod
                 {
                     return teleportPoint.Item2;
                 }
+                else
+                {
+                    //LocationsTeleportCord[currentLocation]
+                    modInstance.Monitor.Log($"что-то не так. {currentLocation} {npcPosition}", LogLevel.Warn);
+                }
             }
+            
 
             //Console.WriteLine($"Teleportation not possible for location: {currentLocation}, position: {npcPosition}");
             return "Null"; // Телепортация невозможна
@@ -49,6 +54,7 @@ namespace NpcTrackerMod
         {
             LocationsTeleportCord.Clear();
 
+
             foreach (var location in Game1.locations)
             {
                 var teleportData = new List<(Point, string)>();
@@ -59,13 +65,13 @@ namespace NpcTrackerMod
                 // Добавляем данные о дверях
                 teleportData.AddRange(location.doors.Pairs.Select(door => (door.Key, door.Value)));
 
+                
                 // Добавляем данные в словарь
-                LocationsTeleportCord[location.Name] = teleportData;
+                LocationsTeleportCord[location.Name] = teleportData;               
             }
 
             modInstance.LocationSet = true;
         }
-
     }
 }
 

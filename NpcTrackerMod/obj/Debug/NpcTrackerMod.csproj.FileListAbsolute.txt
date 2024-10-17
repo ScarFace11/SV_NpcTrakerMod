@@ -4,6 +4,6 @@ C:\!SSD\programming\Stardew Valley Modding\NpcTrackerMod\NpcTrackerMod\NpcTracke
 C:\!SSD\programming\Stardew Valley Modding\NpcTrackerMod\NpcTrackerMod\NpcTrackerMod\bin\Debug\System.ValueTuple.dll
 C:\!SSD\programming\Stardew Valley Modding\NpcTrackerMod\NpcTrackerMod\NpcTrackerMod\bin\Debug\System.ValueTuple.xml
 C:\!SSD\programming\Stardew Valley Modding\NpcTrackerMod\NpcTrackerMod\NpcTrackerMod\obj\Debug\NpcTrackerMod.csproj.CopyComplete
-C:\!SSD\programming\Stardew Valley Modding\NpcTrackerMod\NpcTrackerMod\NpcTrackerMod\obj\Debug\NpcTrackerMod.csproj.AssemblyReference.cache
 C:\!SSD\programming\Stardew Valley Modding\NpcTrackerMod\NpcTrackerMod\NpcTrackerMod\bin\Debug\Newtonsoft.Json.dll
 C:\!SSD\programming\Stardew Valley Modding\NpcTrackerMod\NpcTrackerMod\NpcTrackerMod\bin\Debug\Newtonsoft.Json.xml
+C:\!SSD\programming\Stardew Valley Modding\NpcTrackerMod\NpcTrackerMod\NpcTrackerMod\obj\Debug\NpcTrackerMod.csproj.AssemblyReference.cache
