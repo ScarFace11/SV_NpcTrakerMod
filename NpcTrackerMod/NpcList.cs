@@ -178,8 +178,8 @@ namespace NpcTrackerMod
                 {
                     modInstance.NpcManager.GetNpcRoutePoints(npc);
 
-                    if (!FullGlobalList )//&& npc.Name == "Sophia")
-                        modInstance.NpcManager.GetNpcGlobalRoutePoints(npc, null, null, null);
+                    if (!FullGlobalList)
+                        modInstance.NpcManager.ProcessNpcGlobalRoute(npc, null, null, null);
                 }
                 catch (Exception ex)
                 {
@@ -187,6 +187,12 @@ namespace NpcTrackerMod
                 }
             }         
             FullGlobalList = true;
+
+            //NPClist.Sort();
+            //foreach (var x in NPClist)
+            //{
+            //    modInstance.Monitor.Log($"{x.Name}", LogLevel.Debug);
+            //}
             
         }
 

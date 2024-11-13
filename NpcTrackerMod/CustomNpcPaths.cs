@@ -365,10 +365,10 @@ namespace NpcTrackerMod
                     // Перебираем и выводим все пути для этого расписания
                     foreach (var path in paths)
                     {
-                        if (npcName == "Sophia") //"Peaches")
+                        if (npcName == "Dwarf") //"Peaches")
                         {
-                            //modInstance.Monitor.Log($"name: {npcName}, key: {scheduleDay}, path: {path}", LogLevel.Debug);
-                            modInstance.NpcManager.GetNpcGlobalRoutePoints(null, npcName, path, scheduleDay);
+                            modInstance.Monitor.Log($"name: {npcName}, key: {scheduleDay}, path: {path}", LogLevel.Debug);
+                            modInstance.NpcManager.ProcessNpcGlobalRoute(null, npcName, path, scheduleDay);
                         }
 
                     }
