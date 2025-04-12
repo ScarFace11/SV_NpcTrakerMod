@@ -14,7 +14,7 @@ namespace NpcTrackerMod
     /// </summary>
     public class NpcManager
     {
-        private readonly NpcTrackerMod modInstance;
+        private readonly _modInstance modInstance;
 
         private string LastLocationName;
         private string EndLocationName;
@@ -24,7 +24,7 @@ namespace NpcTrackerMod
         /// Инициализирует экземпляр <see cref="NpcManager"/> с указанной ссылкой на мод.
         /// </summary>
         /// <param name="instance">Ссылка на экземпляр мода NpcTrackerMod.</param>
-        public NpcManager(NpcTrackerMod instance)
+        public NpcManager(_modInstance instance)
         {
             modInstance = instance;
         }
@@ -79,9 +79,9 @@ namespace NpcTrackerMod
             Dictionary<string, string> masterSchedule = GetMasterSchedule(npc, path, pathkey);
 
             // Добавляем NPC в список, если его там еще нет
-            if (!modInstance.NpcList.NpcTotalList.Contains(npc.Name))
+            if (!modInstance.NpcList.TotalNpcList.Contains(npc.Name))
             {
-                modInstance.NpcList.NpcTotalList.Add(npc.Name);
+                modInstance.NpcList.TotalNpcList.Add(npc.Name);
             }
 
             var totalNpcPath = new List<(string, List<Point>)>();
@@ -239,12 +239,12 @@ namespace NpcTrackerMod
             }
 
             LastLocationName = null; // Сброс последней локации
-            modInstance.NpcList.AddNpcPath(npc, modInstance.NpcList.NpcTotalGlobalPath, totalNpcPath);
+            modInstance.NpcList.AddNpcPath(npc, modInstance.NpcList.GlobalNpcPaths, totalNpcPath);
         }
 
         private NPC FindNpcByName(string npcName)
         {
-            return modInstance.NpcList.NPClist.FirstOrDefault(npc => npc.Name.IndexOf(npcName, StringComparison.OrdinalIgnoreCase) >= 0);
+            return modInstance.NpcList.GameNpcs.FirstOrDefault(npc => npc.Name.IndexOf(npcName, StringComparison.OrdinalIgnoreCase) >= 0);
         }
 
         private Dictionary<string, string> GetMasterSchedule(NPC npc, string path, string pathKey)
@@ -394,78 +394,7 @@ namespace NpcTrackerMod
                     endMessage = potentialMessage;
                     //modInstance.Monitor.Log($"6 {endMessage}", LogLevel.Debug);
                 }
-            }
-
-            //// Извлекаем поведение, если есть
-            //if (scheduleParts.Length > currentIndex)
-            //{
-            //    endBehavior = scheduleParts[currentIndex];
-            //    currentIndex++;
-            //}
-
-            //// Проверяем наличие сообщения с кавычками (endMessage)
-            //if (scheduleParts.Length > currentIndex)
-            //{
-            //    endMessage = GetEndMessageFromEntry(scheduleParts, currentIndex);
-            //}
-
-
-            //// Проверяем, является ли первый элемент временем
-            //if (!int.TryParse(time, out _))
-            //{
-            //    //modInstance.Monitor.Log($"1 ", LogLevel.Debug);
-            //    time = "0"; // Если время не указано, используем "0" по умолчанию
-            //    locationName = scheduleParts[0];
-            //    EndLocationName = locationName;
-            //    x = int.Parse(scheduleParts[1]);
-            //    y = int.Parse(scheduleParts[2]);
-
-            //    // Извлекаем направление взгляда или используем 2 по умолчанию
-            //    facingDirection = scheduleParts.Length > 3 && int.TryParse(scheduleParts[3], out var direction) ? direction : 2;
-
-            //    // Извлекаем поведение и сообщение, если они есть
-            //    endBehavior = partsCount > 4 ? scheduleParts[4] : null;
-
-            //    // Проверяем наличие строки с кавычками для endMessage
-            //    endMessage = partsCount > 5 ? GetEndMessageFromEntry(scheduleParts, 5) : null;
-            //}
-            //else
-            //{
-            //    //modInstance.Monitor.Log($"2 ", LogLevel.Debug);
-
-            //    string locationEntry = scheduleParts[1];
-
-            //    modInstance.Monitor.Log($"{locationEntry}", LogLevel.Debug);
-            //    // Проверяем, является ли локация числом (например, идентификатором)
-            //    if (int.TryParse(locationEntry, out _))
-            //    {
-            //        // Если это число, пробуем найти правильную локацию
-            //        locationName = ResolveLocationName(locationEntry, scheduleEntry, npcScheduleData);
-            //        modInstance.Monitor.Log($"{locationName}", LogLevel.Debug);
-            //        shift = 1;
-            //    }
-            //    else
-            //    {
-            //        locationName = scheduleParts[1];
-            //    }
-
-            //    // Извлекаем координаты и направление
-            //    x = int.Parse(scheduleParts[2 - shift]);
-            //    y = int.Parse(scheduleParts[3 - shift]);
-
-            //    modInstance.Monitor.Log($"{x} {y}", LogLevel.Debug);
-
-            //    facingDirection = int.TryParse(scheduleParts[4 - shift], out var direction) ? direction : 2;
-
-            //    modInstance.Monitor.Log($"{facingDirection}", LogLevel.Debug);
-            //    // Извлекаем поведение и сообщение, если они есть
-
-            //    endBehavior = partsCount > 5 - shift ? scheduleParts[5 - shift] : null;
-
-            //    modInstance.Monitor.Log($"{endBehavior}", LogLevel.Debug);
-            //    endMessage = partsCount > 6 - shift ? GetEndMessageFromEntry(scheduleParts, 6 - shift) : null;
-            //    modInstance.Monitor.Log($"{endMessage}", LogLevel.Debug);
-            //}          
+            }       
         }
 
         
@@ -620,7 +549,7 @@ namespace NpcTrackerMod
             if (npc.Schedule?.Any() != true)
             {
                 //modInstance.Monitor.Log($"NPC {npc.Name} has no schedule.", LogLevel.Warn);
-                modInstance.NpcList.AddNpcBlackList(npc.Name);
+                modInstance.NpcList.AddToBlacklist(npc.Name);
                 return;
             }
 
@@ -629,7 +558,10 @@ namespace NpcTrackerMod
             totalNpcPath.AddRange(npc.Schedule
                 .SelectMany(scheduleEntry => NpcPathFilter(npc.currentLocation.Name, scheduleEntry.Value.route))
             );
-            modInstance.NpcList.NpcTotalList.Add(npc.Name);
+            modInstance.NpcList.TotalNpcList.Add(npc.Name);
+
+
+    
 
             // Сброс последней локации
             LastLocationName = null;

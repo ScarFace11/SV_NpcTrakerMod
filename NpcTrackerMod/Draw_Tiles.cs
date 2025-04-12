@@ -2,7 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 
 using StardewValley;
-
+using System.Collections.Generic;
 
 namespace NpcTrackerMod
 {
@@ -11,12 +11,19 @@ namespace NpcTrackerMod
     /// </summary>
     public class Draw_Tiles
     {
-        private readonly int _tileSize;
+        /// <summary> Словарь для хранения состояния плиток. </summary>
+        public Dictionary<Point, (Color originalColor, Color currentColor, int priority)> tileStates = new Dictionary<Point, (Color, Color, int)>();
+
+        /// <summary> Словарь для временных цветов NPC. </summary>
+        public Dictionary<Point, Color> npcTemporaryColors = new Dictionary<Point, Color>();
+
+        /// <summary> Размер плитки. </summary>
+        public readonly int tileSize = Game1.tileSize;
 
         /// <summary> Текстура линии для отрисовки. </summary>
         private readonly Texture2D _lineTexture;
 
-        private readonly NpcTrackerMod modInstance;
+        private readonly _modInstance modInstance;
 
         /// <summary>
         /// Инициализирует новый экземпляр класса <see cref="Draw_Tiles"/>.
@@ -24,9 +31,8 @@ namespace NpcTrackerMod
         /// <param name="instance">Экземпляр модификации.</param>
         /// <param name="tileSize">Размер тайла в пикселях.</param>
         /// <param name="lineTexture">Текстура линии для отрисовки.</param>
-        public Draw_Tiles(NpcTrackerMod instance, int tileSize)
+        public Draw_Tiles(_modInstance instance)
         {
-            _tileSize = tileSize;
             modInstance = instance;
             _lineTexture = CreateLineTexture(Game1.graphics.GraphicsDevice);
         }
@@ -42,6 +48,7 @@ namespace NpcTrackerMod
             texture.SetData(new[] { Color.White });
             return texture;
         }
+        
         /// <summary>
         /// Отрисовывает сетку на экране.
         /// </summary>
@@ -56,27 +63,57 @@ namespace NpcTrackerMod
             {
                 for (int y = 0; y < mapLayer.LayerHeight; y++)
                 {
-                    Vector2 tilePosition = new Vector2(x * _tileSize, y * _tileSize) - cameraOffset;
-                    DrawTileHighlight(spriteBatch, tilePosition, Color.Black);
+                    Vector2 tilePosition = new Vector2(x * tileSize, y * tileSize) - cameraOffset;
+                    DrawGridTile(spriteBatch, tilePosition, Color.Black);
                 }
             }
         }
 
         /// <summary>
-        /// Отрисовывает выделение тайла.
+        /// Рисует только сетку (границы тайлов).
         /// </summary>
         /// <param name="spriteBatch">Экземпляр <see cref="SpriteBatch"/> для отрисовки.</param>
-        /// <param name="tilePosition">Позиция тайла на экране.</param>
-        /// <param name="color">Цвет линии.</param>
-        public void DrawTileHighlight(SpriteBatch spriteBatch, Vector2 tilePosition, Color color)
+        /// <param name="tilePosition">Позиция тайла.</param>
+        /// <param name="color">Цвет линии сетки.</param>
+        private void DrawGridTile(SpriteBatch spriteBatch, Vector2 tilePosition, Color color)
         {
-            Rectangle tileRect = new Rectangle((int)tilePosition.X, (int)tilePosition.Y, _tileSize, _tileSize);
+            Rectangle tileRect = new Rectangle((int)tilePosition.X, (int)tilePosition.Y, tileSize, tileSize);
 
+            // Рисуем только границы
+            spriteBatch.Draw(_lineTexture, new Rectangle(tileRect.Left, tileRect.Top, tileRect.Width, 1), color); // Верхняя линия
+            spriteBatch.Draw(_lineTexture, new Rectangle(tileRect.Left, tileRect.Bottom - 1, tileRect.Width, 1), color); // Нижняя линия
+            spriteBatch.Draw(_lineTexture, new Rectangle(tileRect.Left, tileRect.Top, 1, tileRect.Height), color); // Левая линия
+            spriteBatch.Draw(_lineTexture, new Rectangle(tileRect.Right - 1, tileRect.Top, 1, tileRect.Height), color); // Правая линия
+        }
+
+        /// <summary>
+        /// Отрисовывает все тайлы.
+        /// </summary>
+        /// <param name="spriteBatch">Экземпляр <see cref="SpriteBatch"/> для отрисовки.</param>
+        /// <param name="cameraOffset">Смещение камеры.</param>
+        public void DrawTiles(SpriteBatch spriteBatch, Vector2 cameraOffset)
+        {
+            foreach (var tile in tileStates)
+            {
+                Vector2 tilePosition = new Vector2(tile.Key.X * tileSize, tile.Key.Y * tileSize) - cameraOffset;
+                var color = npcTemporaryColors.TryGetValue(tile.Key, out var tempColor) ? tempColor : tile.Value.currentColor;
+
+                DrawTileFill(spriteBatch, tilePosition, color); // Рисуем только внутреннюю часть тайла
+            }
+        }
+
+        /// <summary>
+        /// Отрисовывает только внутреннюю часть тайла.
+        /// </summary>
+        /// <param name="spriteBatch">Экземпляр <see cref="SpriteBatch"/> для отрисовки.</param>
+        /// <param name="tilePosition">Позиция тайла.</param>
+        /// <param name="color">Цвет заливки тайла.</param>
+        private void DrawTileFill(SpriteBatch spriteBatch, Vector2 tilePosition, Color color)
+        {
+            Rectangle tileRect = new Rectangle((int)tilePosition.X, (int)tilePosition.Y, tileSize, tileSize);
+
+            // Рисуем только заливку тайла
             spriteBatch.Draw(_lineTexture, tileRect, new Color(color, 0.05f));
-            spriteBatch.Draw(_lineTexture, new Rectangle(tileRect.Left, tileRect.Top, tileRect.Width, 1), color);
-            spriteBatch.Draw(_lineTexture, new Rectangle(tileRect.Left, tileRect.Bottom - 1, tileRect.Width, 1), color);
-            spriteBatch.Draw(_lineTexture, new Rectangle(tileRect.Left, tileRect.Top, 1, tileRect.Height), color);
-            spriteBatch.Draw(_lineTexture, new Rectangle(tileRect.Right - 1, tileRect.Top, 1, tileRect.Height), color);
         }
 
         /// <summary>
@@ -85,7 +122,7 @@ namespace NpcTrackerMod
         /// <param name="tile">Координаты тайла.</param>
         public void RestoreTileColor(Point tile)
         {
-            modInstance.npcTemporaryColors.Remove(tile);
+            npcTemporaryColors.Remove(tile);
         }
 
         /// <summary>
@@ -96,9 +133,9 @@ namespace NpcTrackerMod
         /// <param name="priority">Приоритет отрисовки.</param>
         public void DrawTileWithPriority(Point tile, Color color, int priority)
         {
-            if (!modInstance.tileStates.TryGetValue(tile, out var currentState) || currentState.priority < priority)
+            if (!tileStates.TryGetValue(tile, out var currentState) || currentState.priority < priority)
             {
-                modInstance.tileStates[tile] = (currentState.originalColor, color, priority);
+                tileStates[tile] = (currentState.originalColor, color, priority);
             }
         }
 
@@ -110,7 +147,7 @@ namespace NpcTrackerMod
         /// <param name="priority">Приоритет отрисовки.</param>
         public void DrawTileForNpcMovement(Point tile, Color color, int priority)
         {
-            modInstance.npcTemporaryColors[tile] = color;
+            npcTemporaryColors[tile] = color;
             DrawTileWithPriority(tile, color, priority);
         }
     }

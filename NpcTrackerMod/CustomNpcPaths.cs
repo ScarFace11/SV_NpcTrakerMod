@@ -15,14 +15,14 @@ namespace NpcTrackerMod
     /// </summary>
     public class CustomNpcPaths
     {
-        private readonly NpcTrackerMod modInstance;
+        private readonly _modInstance modInstance;
 
 
         /// <summary>
         /// Конструктор для инициализации класса CustomNpcPaths.
         /// </summary>
         /// /// <param name="instance">Экземпляр мода.</param>
-        public CustomNpcPaths(NpcTrackerMod instance)
+        public CustomNpcPaths(_modInstance instance)
         {
             modInstance = instance;
         }

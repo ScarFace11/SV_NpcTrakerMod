@@ -8,12 +8,12 @@ namespace NpcTrackerMod
 {
     public class LocationsList
     {
-        private readonly NpcTrackerMod modInstance;
+        private readonly _modInstance modInstance;
 
         // Словарь с локациями, их координатами и локациями для телепортации
         public Dictionary<string, List<(Point, string)>> LocationsTeleportCord { get; } = new Dictionary<string, List<(Point, string)>>();
 
-        public LocationsList(NpcTrackerMod instance)
+        public LocationsList(_modInstance instance)
         {
             this.modInstance = instance;
         }

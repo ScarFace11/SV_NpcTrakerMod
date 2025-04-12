@@ -11,14 +11,17 @@ namespace NpcTrackerMod
 {
     public class ModEntry
     {
-        private readonly NpcTrackerMod modInstance;
+        private readonly _modInstance modInstance;
         private bool DayStarted = false;
+
+        /// <summary> Предыдущая локация игрока. </summary>
+        private string previousLocationName;
 
         /// <summary>
         /// Конструктор класса ModEntry.
         /// </summary>
         /// /// <param name="instance">Экземпляр NpcTrackerMod.</param>
-        public ModEntry(NpcTrackerMod instance)
+        public ModEntry(_modInstance instance)
         {
             modInstance = instance;
         }
@@ -30,8 +33,9 @@ namespace NpcTrackerMod
         /// <param name="e">Событие нажатия кнопки.</param>
         public void OnButtonPressed(object sender, ButtonPressedEventArgs e)
         {
-            if (Game1.activeClickableMenu != null) return; // Проверка, что нет активного меню
-
+            if (!Context.IsWorldReady) return;
+            if (Game1.activeClickableMenu != null || (!Context.IsPlayerFree)) return; // Проверка, что нет активного меню
+            
             switch (e.Button)
             {
                 case SButton.G:
@@ -78,7 +82,7 @@ namespace NpcTrackerMod
         /// </summary>
         private void OpenTrackingMenu()
         {
-            Game1.activeClickableMenu = new TrackingMenu();
+            Game1.activeClickableMenu = new TrackingMenu(modInstance);
         }
 
         /// <summary>
@@ -117,14 +121,14 @@ namespace NpcTrackerMod
         /// </summary>
         private void ClearDataForNewDay()
         {
-            modInstance.tileStates.Clear();
+            modInstance.DrawTiles.tileStates.Clear();
             modInstance.npcPreviousPositions.Clear();
-            modInstance.npcTemporaryColors.Clear();
+            modInstance.DrawTiles.npcTemporaryColors.Clear();
             modInstance.SwitchGetNpcPath = false;
 
-            modInstance.NpcList.NpcBlackList.Clear();
-            modInstance.NpcList.NpcTotalList.Clear();
-            modInstance.NpcList.NpcCurrentList.Clear();
+            modInstance.NpcList.BlacklistedNpcs .Clear();
+            modInstance.NpcList.TotalNpcList.Clear();
+            modInstance.NpcList.CurrentNpcList.Clear();
             modInstance.NpcList.NpcTotalToDayPath.Clear();
 
             modInstance.NpcCount = 0;
@@ -141,7 +145,6 @@ namespace NpcTrackerMod
             DayStarted = false;
         }
 
-        
         /// <summary>
         /// Отрисовывает сетку и маршруты NPC в мире игры.
         /// </summary>
@@ -149,15 +152,16 @@ namespace NpcTrackerMod
         /// <param name="e">Событие отрисовки мира.</param>
         public void OnRenderedWorld(object sender, RenderedWorldEventArgs e)
         {           
-            if (!modInstance.DisplayGrid) return;
-
+            if (!modInstance.EnableDisplay) return;
+            
             try
             {
                 var spriteBatch = e.SpriteBatch;
                 Vector2 cameraOffset = new Vector2(Game1.viewport.X, Game1.viewport.Y);
-                
-                modInstance.DrawTiles.DrawGrid(spriteBatch, cameraOffset);
+
                 modInstance.DrawNpcPaths(spriteBatch, cameraOffset);
+
+                if (modInstance.DisplayGrid) modInstance.DrawTiles.DrawGrid(spriteBatch, cameraOffset);               
             }
             catch (Exception ex)
             {
@@ -165,7 +169,20 @@ namespace NpcTrackerMod
             }
         }
 
+        /// <summary>
+        /// Проверка игрока на переход между локациями.
+        /// </summary>
+        public void OnPlayerWarped(object sender, WarpedEventArgs e)
+        {
+            if (Game1.player.currentLocation.Name != previousLocationName)
+            {
+                modInstance.DrawTiles.tileStates.Clear();
+                previousLocationName = Game1.player.currentLocation.Name;
+                modInstance.SwitchGetNpcPath = true;
+                modInstance.NpcCount = Game1.player.currentLocation.characters.Count();
 
+            }
+        }
 
         /// <summary>
         /// Обрабатывает обновление по тикам.
@@ -179,12 +196,23 @@ namespace NpcTrackerMod
 
             if (DayStarted && e.IsMultipleOf((uint)(tickRate * intervalInSeconds)))
             {
-                //modInstance.Monitor.Log("Апдейт", LogLevel.Debug);
-                if (modInstance.DisplayGrid && (!modInstance.SwitchGlobalNpcPath && !modInstance.SwitchTargetLocations) && (Game1.player.currentLocation.characters.Count() != modInstance.NpcCount))
-                {                  
-                    modInstance.tileStates.Clear();
+                //foreach(var i in modInstance.NpcList.NpcCurrentList)
+                //{
+                //    modInstance.Monitor.Log($"{i}", LogLevel.Debug);
+                //}
+
+                /*
+                1) Мод включён
+                2) отображения всех возможных путей и всех нпс отключено
+                3) кол-во нпс в текущей локации не совпадает с кол-вом нпс с прошлого расчета
+                4) ? возможно заменить 3-ье условия на варпнулся ли игрок
+                */
+                if (modInstance.EnableDisplay && (!modInstance.SwitchGlobalNpcPath && !modInstance.SwitchTargetLocations) && (Game1.player.currentLocation.characters.Count() != modInstance.NpcCount))
+                {
+                    modInstance.DrawTiles.tileStates.Clear();
                     modInstance.SwitchGetNpcPath = true;
                     modInstance.NpcCount = Game1.player.currentLocation.characters.Count();
+                    if(!modInstance.SwitchGlobalNpcPath) modInstance.NpcList.RefreshCurrentNpcList();
                 }
             }
         }
