@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using StardewModdingAPI;
 using StardewValley;
 using Microsoft.Xna.Framework;
@@ -67,11 +67,11 @@ namespace NpcTrackerMod
                 return;
             }
 
-            // Проверяем наличие расписания у NPC
-            if (npc.Schedule?.Any() != true)
+            // Если передан кастомный путь (path != null) — он приоритетен, даже когда
+            // у NPC нет npc.Schedule (типичная ситуация для модовых NPC через CustomNpcPaths).
+            // Проверку на расписание делаем только когда кастомного пути нет.
+            if (path == null && npc.Schedule?.Any() != true)
             {
-                //modInstance.Monitor.Log($"NPC {npc.Name} Не имеет пути.", LogLevel.Warn);
-                //modInstance.NpcList.AddNpcBlackList(npc.Name);
                 return;
             }
 
@@ -545,19 +545,30 @@ namespace NpcTrackerMod
         /// <returns>Список пар, где строка — это название локации, а список точек — это маршрут NPC на день.</returns>
         public void GetNpcRoutePoints(NPC npc)
         {
-            // Проверяем наличие расписания у NPC
+            // Нет расписания — не добавляем в чёрный список: модовые NPC могут быть обработаны
+            // позже через CustomNpcPaths.TransferPath(). Просто пропускаем.
             if (npc.Schedule?.Any() != true)
             {
-                //modInstance.Monitor.Log($"NPC {npc.Name} has no schedule.", LogLevel.Warn);
-                modInstance.NpcList.AddToBlacklist(npc.Name);
                 return;
             }
 
             var totalNpcPath = new List<(string, List<Point>)>();
-            
+
+            // Фильтруем null/пустые маршруты — у ряда модовых NPC игра не вычисляет
+            // route заранее, даже если запись в Schedule существует.
             totalNpcPath.AddRange(npc.Schedule
+                .Where(scheduleEntry => scheduleEntry.Value?.route != null && scheduleEntry.Value.route.Count > 0)
                 .SelectMany(scheduleEntry => NpcPathFilter(npc.currentLocation.Name, scheduleEntry.Value.route))
             );
+
+            // Если предвычисленных маршрутов нет — делегируем в ProcessNpcGlobalRoute,
+            // который строит маршруты через pathfindToNextScheduleLocation по сырым данным.
+            if (totalNpcPath.Count == 0)
+            {
+                ProcessNpcGlobalRoute(npc, null, null, null);
+                return;
+            }
+
             modInstance.NpcList.TotalNpcList.Add(npc.Name);
 
 
