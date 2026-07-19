@@ -1,0 +1,27 @@
+# Build output
+bin/
+obj/
+
+# NuGet packages
+packages/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Generated documentation
+Documentation/
+
+# Upgrade logs
+UpgradeLog*.htm
+
+# Replit internals
+.cache/
+.replit
+replit.nix
+zipFile.zip
+
+# Misc
+d
+exit
