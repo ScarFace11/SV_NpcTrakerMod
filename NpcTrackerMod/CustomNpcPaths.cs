@@ -157,7 +157,8 @@ namespace NpcTrackerMod
                     }
                     else
                     {
-                        modInstance.Monitor.Log($"Секция 'Entries' не найдена в {scheduleFile}.", LogLevel.Warn);
+                        // Change-запись без Entries — это не расписание (карта, персонаж и т.п.), пропускаем.
+                        modInstance.Monitor.Log($"Change без 'Entries' в {scheduleFile} — пропуск.", LogLevel.Debug);
                     }
                 }
             }
@@ -350,19 +351,32 @@ namespace NpcTrackerMod
 
         public void TransferPath()
         {
-            // Перебираем все NPC в словаре NpcPaths
+            // Собираем имена всех реальных NPC, известных игре на момент вызова.
+            // NPC из кастомных локаций SVE могут здесь отсутствовать — это нормально,
+            // они не будут обработаны и не засорят консоль предупреждениями.
+            var knownNpcNames = modInstance.NpcList.GameNpcs != null
+                ? new HashSet<string>(modInstance.NpcList.GameNpcs.Select(n => n.Name))
+                : new HashSet<string>();
+
             foreach (var npcEntry in NpcPaths)
             {
-                string npcName = npcEntry.Key; // Имя NPC
-                Dictionary<string, List<string>> npcSchedule = npcEntry.Value; // Расписание NPC
+                string npcName = npcEntry.Key;
+                Dictionary<string, List<string>> npcSchedule = npcEntry.Value;
 
-                // Перебираем расписания для каждого NPC
+                // Пропускаем имена, которых нет среди реальных NPC.
+                // Это отсеивает шаблоны расписаний SVE (ShopSchedule, FakeSchedule и т.п.)
+                // и NPC, не загруженных в текущем состоянии игры.
+                if (!knownNpcNames.Contains(npcName))
+                {
+                    modInstance.Monitor.Log($"Пропуск кастомного расписания: '{npcName}' не является активным игровым NPC", LogLevel.Debug);
+                    continue;
+                }
+
                 foreach (var scheduleEntry in npcSchedule)
                 {
-                    string scheduleDay = scheduleEntry.Key; // Ключ расписания 
-                    List<string> paths = scheduleEntry.Value; // Список путей для конкретного дня
+                    string scheduleDay = scheduleEntry.Key;
+                    List<string> paths = scheduleEntry.Value;
 
-                    // Перебираем и выводим все пути для этого расписания
                     foreach (var path in paths)
                     {
                         modInstance.NpcManager.ProcessNpcGlobalRoute(null, npcName, path, scheduleDay);
