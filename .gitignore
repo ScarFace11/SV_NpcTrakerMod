@@ -2,8 +2,6 @@
 bin/
 obj/
 
-# NuGet packages
-packages/
 
 # Visual Studio
 .vs/
@@ -13,15 +11,10 @@ packages/
 # Generated documentation
 Documentation/
 
-# Upgrade logs
-UpgradeLog*.htm
+
 
 # Replit internals
 .cache/
 .replit
 replit.nix
 zipFile.zip
-
-# Misc
-d
-exit
