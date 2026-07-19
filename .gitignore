@@ -11,12 +11,16 @@ obj/
 # Generated documentation
 Documentation/
 
+<<<<<<< HEAD
 # Upgrade logs
 UpgradeLog*.htm
 
+=======
+>>>>>>> main
 # Replit internals
 .cache/
 .replit
+.replit.md
 replit.nix
 zipFile.zip
 
