@@ -68,10 +68,6 @@ namespace NpcTrackerMod
             }
 
             // Если передан кастомный путь (path != null) — он приоритетен, даже когда
-<<<<<<< HEAD
-            // у NPC нет npc.Schedule (типичная ситуация для модовых NPC через CustomNpcPaths).
-=======
->>>>>>> main
             // Проверку на расписание делаем только когда кастомного пути нет.
             if (path == null && npc.Schedule?.Any() != true)
             {
@@ -557,8 +553,6 @@ namespace NpcTrackerMod
 
             var totalNpcPath = new List<(string, List<Point>)>();
 
-<<<<<<< HEAD
-=======
             var timedPath = new Dictionary<int, List<(string, List<Point>)>>();
 
             // Обходим расписание по порядку (ключи — игровое время: 600, 900, 1200…)
@@ -570,7 +564,6 @@ namespace NpcTrackerMod
                     timedPath[scheduleEntry.Key] = segments;
             }
 
->>>>>>> main
             // Фильтруем null/пустые маршруты — у ряда модовых NPC игра не вычисляет
             // route заранее, даже если запись в Schedule существует.
             totalNpcPath.AddRange(npc.Schedule
@@ -578,8 +571,6 @@ namespace NpcTrackerMod
                 .SelectMany(scheduleEntry => NpcPathFilter(npc.currentLocation.Name, scheduleEntry.Value.route))
             );
 
-<<<<<<< HEAD
-=======
             foreach (var scheduleEntry in npc.Schedule)
             {
                 var segments = NpcPathFilter(npc.currentLocation.Name, scheduleEntry.Value.route);
@@ -587,7 +578,6 @@ namespace NpcTrackerMod
                     timedPath[scheduleEntry.Key] = segments;
             }
 
->>>>>>> main
             // Если предвычисленных маршрутов нет — делегируем в ProcessNpcGlobalRoute,
             // который строит маршруты через pathfindToNextScheduleLocation по сырым данным.
             if (totalNpcPath.Count == 0)

@@ -81,34 +81,6 @@ namespace NpcTrackerMod
             // Нельзя проверять npc.Schedule: у модовых NPC расписание может быть null/пустым,
             // даже если их маршрут был построен через CustomNpcPaths.
             if (npc?.Name == null) return;
-<<<<<<< HEAD
-
-            //Нормально будет использовать для выборки по 1 маршруту из полного текущего списка 
-            /*
-            if (!NpcTotalPath.TryGetValue(npc.Name, out var paths))
-            {
-                paths = new List<(string, List<Point>)>();
-                NpcTotalPath[npc.Name] = paths;
-                modInstance.Monitor.Log($"Добавлен NPC: {npc.Name}", LogLevel.Trace);
-            }
-
-            foreach (var (location, points) in Route)
-            {
-                var existingLocation = paths.FirstOrDefault(p => p.Item1 == location);
-                if (existingLocation.Item1 == null)
-                {
-                    paths.Add((location, new HashSet<Point>(points).ToList()));
-                    modInstance.Monitor.Log($"Добавлена новая локация {location} для NPC {npc.Name}", LogLevel.Trace);
-                }
-                else
-                {
-                    existingLocation.Item2 = new HashSet<Point>(existingLocation.Item2.Concat(points)).ToList();
-                    modInstance.Monitor.Log($"Обновлены координаты в локации {location} для NPC {npc.Name}", LogLevel.Trace);
-                }
-            }
-            */
-=======
->>>>>>> main
 
             //Проверка наличия данных для NPC
             if (!pathDictionary.ContainsKey(npc.Name))
@@ -228,21 +200,6 @@ namespace NpcTrackerMod
             // в ProcessNpcGlobalRoute только один раз (при инициализации глобального списка).
             if (!_isGlobalListInitialized)
                 _modInstance.CustomNpcPaths.TransferPath();
-<<<<<<< HEAD
-
-            //foreach (var x in NpcTotalGlobalPath)
-            //{
-            //    if (x.Key == "Andy")
-            //    {
-            //        modInstance.Monitor.Log($"NPC: {x.Key}", LogLevel.Debug);
-            //        foreach (var y in x.Value)
-            //        {
-            //            modInstance.Monitor.Log($"Location: {y.Item1}", LogLevel.Debug);
-            //        }
-            //    }
-            //}
-=======
->>>>>>> main
 
             foreach (var npc in GameNpcs)
             {

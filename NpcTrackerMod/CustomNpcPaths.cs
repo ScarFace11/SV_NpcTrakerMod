@@ -365,11 +365,6 @@ namespace NpcTrackerMod
                     // Перебираем и выводим все пути для этого расписания
                     foreach (var path in paths)
                     {
-<<<<<<< HEAD
-                        // Обрабатываем все кастомные NPC, не только тестовый Dwarf
-=======
-                        // Обрабатываем все кастомные NPC
->>>>>>> main
                         modInstance.NpcManager.ProcessNpcGlobalRoute(null, npcName, path, scheduleDay);
                     }
                 }

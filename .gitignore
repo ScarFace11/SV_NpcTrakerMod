@@ -11,12 +11,6 @@ obj/
 # Generated documentation
 Documentation/
 
-<<<<<<< HEAD
-# Upgrade logs
-UpgradeLog*.htm
-
-=======
->>>>>>> main
 # Replit internals
 .cache/
 .replit
@@ -24,6 +18,3 @@ UpgradeLog*.htm
 replit.nix
 zipFile.zip
 
-# Misc
-d
-exit
