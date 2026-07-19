@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using StardewModdingAPI;
 using StardewValley;
 using Microsoft.Xna.Framework;
@@ -554,14 +554,19 @@ namespace NpcTrackerMod
             }
 
             var totalNpcPath = new List<(string, List<Point>)>();
-            
-            totalNpcPath.AddRange(npc.Schedule
-                .SelectMany(scheduleEntry => NpcPathFilter(npc.currentLocation.Name, scheduleEntry.Value.route))
-            );
+            var timedPath = new Dictionary<int, List<(string, List<Point>)>>();
+
+            // Обходим расписание по порядку (ключи — игровое время: 600, 900, 1200…)
+            foreach (var scheduleEntry in npc.Schedule)
+            {
+                var segments = NpcPathFilter(npc.currentLocation.Name, scheduleEntry.Value.route);
+                totalNpcPath.AddRange(segments);
+                if (segments.Count > 0)
+                    timedPath[scheduleEntry.Key] = segments;
+            }
+
             modInstance.NpcList.TotalNpcList.Add(npc.Name);
-
-
-    
+            modInstance.NpcList.NpcTimedDayPath[npc.Name] = timedPath;
 
             // Сброс последней локации
             LastLocationName = null;
