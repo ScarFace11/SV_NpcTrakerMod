@@ -11,10 +11,9 @@ obj/
 # Generated documentation
 Documentation/
 
-
-
 # Replit internals
 .cache/
 .replit
+.replit.md
 replit.nix
 zipFile.zip

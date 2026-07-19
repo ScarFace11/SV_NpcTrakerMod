@@ -1,6 +1,5 @@
 using StardewModdingAPI;
 
-
 namespace NpcTrackerMod
 {
     /// <summary>
