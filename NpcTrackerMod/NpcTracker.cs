@@ -92,11 +92,6 @@ namespace NpcTrackerMod
             // Загружаем расписания модовых NPC из ContentPatcher JSON-файлов при старте,
             // чтобы данные были готовы к первому DayStarted.
             CustomNpcPaths.LoadAllModSchedules();
-            
-
-            // Загружаем расписания модовых NPC из ContentPatcher JSON-файлов при старте,
-            // чтобы данные были готовы к первому DayStarted.
-            CustomNpcPaths.LoadAllModSchedules();
         }
 
         /// <summary> Сохраняет конфигурацию в config.json. </summary>
@@ -191,32 +186,12 @@ namespace NpcTrackerMod
         /// </summary>
         private void DrawNpcRoute(NPC npc)
         {
-            // Проверка на наличие расписания
-            if (!SwitchGetNpcPath) return;
-
-            List<(string, List<Microsoft.Xna.Framework.Point>)> pathData = null;
-
-            if (SwitchGlobalNpcPath)
-            {
-                NpcList.GlobalNpcPaths.TryGetValue(npc.Name, out pathData);
-            }
-            else
-            {
-                // Сначала пробуем дневной путь. Если его нет (модовые NPC часто попадают
-                // только в GlobalNpcPaths через CustomNpcPaths.TransferPath) — берём глобальный.
-                if (!NpcList.NpcTotalToDayPath.TryGetValue(npc.Name, out pathData) || pathData == null)
-                {
-                    NpcList.GlobalNpcPaths.TryGetValue(npc.Name, out pathData);
-                }
-            }
-
-            if (pathData == null)
             try
             {
                 if (!SwitchGetNpcPath || npc == null) return;
                 string timeLabel = null;
-
-                if (SwitchGlobalNpcPath)
+                    List<(string, List<Microsoft.Xna.Framework.Point>)> pathData = null;
+                    if (SwitchGlobalNpcPath)
                 {
                     if (!NpcList.GlobalNpcPaths.TryGetValue(npc.Name, out var globalPath) || globalPath == null)
                     {
