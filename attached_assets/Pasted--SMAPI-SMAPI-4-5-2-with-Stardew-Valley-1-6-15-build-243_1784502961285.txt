@@ -1,0 +1,211 @@
+[SMAPI] SMAPI 4.5.2 with Stardew Valley 1.6.15 build 24356 on Windows 10 (10.0.19045.0)
+[SMAPI] Mods go here: C:\!SSD\SteamLibrary\steamapps\common\Stardew Valley\Mods
+[SMAPI] Waiting for game to launch...
+[SMAPI] Loading mod metadata...
+[SMAPI] Loading mods...
+[SMAPI] Loaded 11 mods:
+[SMAPI]    CJB Cheats Menu 1.42.0 by CJBok and Pathoschild | Simple in-game cheats menu!
+[SMAPI]    CJB Item Spawner 2.5.6 by CJBok and Pathoschild | Simple in-game item spawner!
+[SMAPI]    Console Commands 4.5.2 by SMAPI | Adds SMAPI console commands that let you manipulate the game.
+[SMAPI]    Content Patcher 2.9.1 by Pathoschild | Loads content packs which edit game data, images, and maps without changing the game files.
+[SMAPI]    Debug Mode 1.17.4 by Pathoschild | Enables an overlay which provides debug information and unlocks the game's debug hotkeys.
+[SMAPI]    Farm Type Manager (FTM) 1.26.1 by Esca | Allows custom spawning of content from each farm type: forage, large objects, ore, and monsters
+[SMAPI]    Noclip Mode 1.3.20 by Pathoschild | Press a key to enable noclip mode (which lets you walk through anything).
+[SMAPI]    NpcTrackerMod 1.0.0 by ScarFace | Tracking the path of the NPC
+[SMAPI]    Save Backup 4.5.2 by SMAPI | Automatically backs up all your saves once per day into its folder.
+[SMAPI]    SpaceCore 1.28.4 by kittycatcasey | The space-iest of cores. (Framework mod)
+[SMAPI]    Stardew Valley Expanded 1.15.11 by FlashShifter, Esca, and kittycatcasey | Adds coded elements to the game
+
+[SMAPI] Loaded 2 content packs:
+[SMAPI]    Stardew Valley Expanded 1.15.11 by FlashShifter | for Content Patcher | An expansive fanmade mod for ConcernedApe's Stardew Valley.
+[SMAPI]    Stardew Valley Expanded Farm Type Manager 1.15.11 by FlashShifter | for Farm Type Manager (FTM) | This FTM pack is for SVE!
+
+[SMAPI]    Changed save serializer
+[SMAPI]    --------------------------------------------------
+[SMAPI]       These mods change the save serializer. They may corrupt your save files, or make them unusable if
+[SMAPI]       you uninstall these mods.
+
+[SMAPI]       - SpaceCore
+
+[SMAPI]    Patched game code
+[SMAPI]    --------------------------------------------------
+[SMAPI]       These mods directly change the game code. They're more likely to cause errors or bugs in-game; if
+[SMAPI]       your game has issues, try removing these first. Otherwise you can ignore this warning.
+
+[SMAPI]       - Farm Type Manager (FTM)
+[SMAPI]       - SpaceCore
+[SMAPI]       - Stardew Valley Expanded
+
+
+
+[SMAPI]    No update keys
+[SMAPI]    --------------------------------------------------
+[SMAPI]       These mods have no update keys in their manifest. SMAPI may not notify you about updates for these
+[SMAPI]       mods. Consider notifying the mod authors about this problem.
+
+[SMAPI]       - NpcTrackerMod
+
+[SMAPI] Launching mods...
+[NpcTrackerMod] Секция 'Entries' не найдена в C:\!SSD\SteamLibrary\steamapps\common\Stardew Valley\Mods\NpcTrackerMod\..\..\Mods\Stardew Valley Expanded\[CP] Stardew Valley Expanded\assets\CharacterFiles\Schedules\Krobus\Schedule.json.
+[NpcTrackerMod] Секция 'Entries' не найдена в C:\!SSD\SteamLibrary\steamapps\common\Stardew Valley\Mods\NpcTrackerMod\..\..\Mods\Stardew Valley Expanded\[CP] Stardew Valley Expanded\assets\CharacterFiles\Schedules\Krobus\Schedule.json.
+[NpcTrackerMod] Все кастомные нпс добавлены!
+[Stardew Valley Expanded] Starting Installation Checker...
+[Stardew Valley Expanded] (Installation Checker provided by shekurika and moe)
+[Stardew Valley Expanded] Installation check completed. Everything seems fine!
+[SMAPI] Mods loaded and ready!
+Setting breakpad minidump AppID = 413150
+SteamInternal_SetMinidumpSteamID:  Caching Steam ID:  76561198254294098 [API loaded no]
+[SMAPI] Type 'help' for help, or 'help <cmd>' for a command's usage
+[NpcTrackerMod] NPC Apples не найден.
+[NpcTrackerMod] NPC Apples не найден.
+[NpcTrackerMod] NPC Apples не найден.
+[NpcTrackerMod] NPC Apples не найден.
+[NpcTrackerMod] NPC Apples не найден.
+[NpcTrackerMod] NPC Apples не найден.
+[NpcTrackerMod] NPC Apples не найден.
+[NpcTrackerMod] NPC Apples не найден.
+[NpcTrackerMod] NPC Apples не найден.
+[NpcTrackerMod] NPC Apples не найден.
+[NpcTrackerMod] NPC Apples не найден.
+[NpcTrackerMod] NPC Apples не найден.
+[NpcTrackerMod] NPC Apples не найден.
+[NpcTrackerMod] NPC Apples не найден.
+[NpcTrackerMod] NPC Apples не найден.
+[NpcTrackerMod] NPC Apples не найден.
+[NpcTrackerMod] NPC Apples не найден.
+[NpcTrackerMod] NPC Apples не найден.
+[NpcTrackerMod] NPC Apples не найден.
+[NpcTrackerMod] NPC Apples не найден.
+[NpcTrackerMod] NPC Apples не найден.
+[NpcTrackerMod] NPC Apples не найден.
+[NpcTrackerMod] NPC CharlieChicken не найден.
+[NpcTrackerMod] NPC CharlieChicken не найден.
+[NpcTrackerMod] NPC CharlieChicken не найден.
+[NpcTrackerMod] NPC CharlieChicken не найден.
+[NpcTrackerMod] NPC CharlieChicken не найден.
+[NpcTrackerMod] NPC CharlieChicken не найден.
+[NpcTrackerMod] NPC Dusty не найден.
+[NpcTrackerMod] что-то не так. ArchaeologyHouse {X:45 Y:70}
+[NpcTrackerMod] что-то не так. ArchaeologyHouse {X:101 Y:89}
+[NpcTrackerMod] что-то не так. ArchaeologyHouse {X:101 Y:89}
+[NpcTrackerMod] что-то не так. ArchaeologyHouse {X:101 Y:89}
+[NpcTrackerMod] что-то не так. ArchaeologyHouse {X:101 Y:89}
+[NpcTrackerMod] что-то не так. ArchaeologyHouse {X:45 Y:70}
+[NpcTrackerMod] что-то не так. ArchaeologyHouse {X:101 Y:89}
+[NpcTrackerMod] что-то не так. ArchaeologyHouse {X:45 Y:70}
+[NpcTrackerMod] что-то не так. ArchaeologyHouse {X:57 Y:116}
+[NpcTrackerMod] что-то не так. ArchaeologyHouse {X:57 Y:116}
+[NpcTrackerMod] что-то не так. ArchaeologyHouse {X:101 Y:89}
+[NpcTrackerMod] что-то не так. ArchaeologyHouse {X:45 Y:70}
+[NpcTrackerMod] что-то не так. ArchaeologyHouse {X:45 Y:70}
+[SpaceCore] Scheduler could not find route from WitchSwamp to Custom_HenchmanHouse while honoring Gender none
+[SpaceCore] Requested path from WitchSwamp to Custom_HenchmanHouse for Gender Undefined where no valid path was found, for NPC Henchman.
+[NpcTrackerMod] Invalid input to NpcPathFilter. WitchSwamp System.Collections.Generic.Stack`1[Microsoft.Xna.Framework.Point] 0
+[NpcTrackerMod] NPC Lance не найден.
+[NpcTrackerMod] NPC Lance не найден.
+[NpcTrackerMod] NPC Lance не найден.
+[NpcTrackerMod] NPC Lance не найден.
+[NpcTrackerMod] NPC Lance не найден.
+[NpcTrackerMod] NPC Lance не найден.
+[NpcTrackerMod] NPC Lance не найден.
+[NpcTrackerMod] NPC Lance не найден.
+[NpcTrackerMod] NPC Lance не найден.
+[NpcTrackerMod] NPC Lance не найден.
+[NpcTrackerMod] NPC Lance не найден.
+[NpcTrackerMod] NPC Lance не найден.
+[NpcTrackerMod] NPC Lance не найден.
+[NpcTrackerMod] NPC Lance не найден.
+[NpcTrackerMod] NPC Lance не найден.
+[NpcTrackerMod] NPC Lance не найден.
+[NpcTrackerMod] что-то не так. Custom_AdventurerSummit {X:18 Y:14}
+[NpcTrackerMod] NPC Morgan не найден.
+[NpcTrackerMod] NPC Morgan не найден.
+[NpcTrackerMod] NPC Morgan не найден.
+[NpcTrackerMod] NPC Morgan не найден.
+[NpcTrackerMod] NPC Morgan не найден.
+[NpcTrackerMod] NPC Morgan не найден.
+[NpcTrackerMod] NPC Morgan не найден.
+[NpcTrackerMod] NPC Morgan не найден.
+[NpcTrackerMod] NPC Morgan не найден.
+[NpcTrackerMod] NPC Morgan не найден.
+[NpcTrackerMod] NPC Morgan не найден.
+[NpcTrackerMod] NPC Morgan не найден.
+[NpcTrackerMod] NPC Morgan не найден.
+[NpcTrackerMod] NPC Morgan не найден.
+[NpcTrackerMod] NPC Morgan не найден.
+[NpcTrackerMod] что-то не так. Custom_AuroraVineyard {X:14 Y:3}
+[SpaceCore] Scheduler could not find route from Custom_Peaches_WarpRoom to Custom_JunimoWoods while honoring Gender female
+[SpaceCore] Requested path from Custom_Peaches_WarpRoom to Custom_JunimoWoods for Gender Female where no valid path was found, for NPC Peaches.
+[NpcTrackerMod] Invalid input to NpcPathFilter. Custom_Peaches_WarpRoom System.Collections.Generic.Stack`1[Microsoft.Xna.Framework.Point] 0
+[NpcTrackerMod] NPC ShopSchedule не найден.
+[NpcTrackerMod] NPC ShopSchedule не найден.
+[NpcTrackerMod] NPC ShopSchedule не найден.
+[NpcTrackerMod] NPC ShopSchedule не найден.
+[NpcTrackerMod] NPC ShopSchedule не найден.
+[NpcTrackerMod] NPC ShopSchedule не найден.
+[NpcTrackerMod] NPC ShopSchedule не найден.
+[NpcTrackerMod] NPC ShopSchedule не найден.
+[NpcTrackerMod] NPC ShopSchedule не найден.
+[NpcTrackerMod] NPC FakeSchedule не найден.
+[SpaceCore] Scheduler could not find route from Custom_Scarlett_WarpRoom to Custom_ScarlettHouse while honoring Gender female
+[SpaceCore] Requested path from Custom_Scarlett_WarpRoom to Custom_ScarlettHouse for Gender Female where no valid path was found, for NPC ScarlettFake.
+[NpcTrackerMod] Invalid input to NpcPathFilter. Custom_Scarlett_WarpRoom System.Collections.Generic.Stack`1[Microsoft.Xna.Framework.Point] 0
+[NpcTrackerMod] что-то не так. Custom_Scarlett_WarpRoom {X:20 Y:29}
+[SpaceCore] Gender Female requested path from Custom_Scarlett_WarpRoom to Custom_ScarlettHouse where no valid path was found, for NPC ScarlettFake.
+[NpcTrackerMod] Invalid input to NpcPathFilter. Custom_Scarlett_WarpRoom System.Collections.Generic.Stack`1[Microsoft.Xna.Framework.Point] 0
+[NpcTrackerMod] что-то не так. Custom_Scarlett_WarpRoom {X:20 Y:29}
+[NpcTrackerMod] что-то не так. Custom_SophiaHouse {X:57 Y:49}
+[SpaceCore] Scheduler could not find route from Forest to Custom_ScarlettHouse while honoring Gender female
+[SpaceCore] Requested path from Forest to Custom_ScarlettHouse for Gender Female where no valid path was found, for NPC ScarlettFake.
+[NpcTrackerMod] Invalid input to NpcPathFilter. Custom_Scarlett_WarpRoom System.Collections.Generic.Stack`1[Microsoft.Xna.Framework.Point] 0
+[NpcTrackerMod] что-то не так. Custom_SophiaHouse {X:57 Y:49}
+[SpaceCore] Gender Female requested path from Forest to Custom_ScarlettHouse where no valid path was found, for NPC ScarlettFake.
+[NpcTrackerMod] Invalid input to NpcPathFilter. Custom_Scarlett_WarpRoom System.Collections.Generic.Stack`1[Microsoft.Xna.Framework.Point] 0
+[NpcTrackerMod] что-то не так. Custom_SophiaHouse {X:57 Y:49}
+[SpaceCore] Gender Female requested path from Forest to Custom_ScarlettHouse where no valid path was found, for NPC ScarlettFake.
+[NpcTrackerMod] Invalid input to NpcPathFilter. Custom_Scarlett_WarpRoom System.Collections.Generic.Stack`1[Microsoft.Xna.Framework.Point] 0
+[NpcTrackerMod] что-то не так. Custom_SophiaHouse {X:57 Y:49}
+[SpaceCore] Gender Female requested path from Forest to Custom_ScarlettHouse where no valid path was found, for NPC ScarlettFake.
+[NpcTrackerMod] Invalid input to NpcPathFilter. Custom_Scarlett_WarpRoom System.Collections.Generic.Stack`1[Microsoft.Xna.Framework.Point] 0
+[NpcTrackerMod] что-то не так. Custom_SophiaHouse {X:57 Y:49}
+[SpaceCore] Scheduler could not find route from Railroad to Custom_GrampletonSuburbsTrainStation while honoring Gender female
+[SpaceCore] Requested path from Railroad to Custom_GrampletonSuburbsTrainStation for Gender Female where no valid path was found, for NPC ScarlettFake.
+[NpcTrackerMod] Invalid input to NpcPathFilter. Custom_Scarlett_WarpRoom System.Collections.Generic.Stack`1[Microsoft.Xna.Framework.Point] 0
+[NpcTrackerMod] что-то не так. Custom_SophiaHouse {X:57 Y:49}
+[SpaceCore] Gender Female requested path from Railroad to Custom_GrampletonSuburbsTrainStation where no valid path was found, for NPC ScarlettFake.
+[NpcTrackerMod] Invalid input to NpcPathFilter. Custom_Scarlett_WarpRoom System.Collections.Generic.Stack`1[Microsoft.Xna.Framework.Point] 0
+[NpcTrackerMod] что-то не так. Custom_SophiaHouse {X:57 Y:49}
+[SpaceCore] Scheduler could not find route from Railroad to Custom_GrampletonSuburbs while honoring Gender female
+[SpaceCore] Requested path from Railroad to Custom_GrampletonSuburbs for Gender Female where no valid path was found, for NPC ScarlettFake.
+[NpcTrackerMod] Invalid input to NpcPathFilter. Custom_Scarlett_WarpRoom System.Collections.Generic.Stack`1[Microsoft.Xna.Framework.Point] 0
+[NpcTrackerMod] что-то не так. Custom_SophiaHouse {X:57 Y:49}
+[SpaceCore] Gender Female requested path from Railroad to Custom_GrampletonSuburbsTrainStation where no valid path was found, for NPC ScarlettFake.
+[NpcTrackerMod] Invalid input to NpcPathFilter. Custom_Scarlett_WarpRoom System.Collections.Generic.Stack`1[Microsoft.Xna.Framework.Point] 0
+[NpcTrackerMod] что-то не так. Custom_Scarlett_WarpRoom {X:17 Y:30}
+[NpcTrackerMod] что-то не так. Custom_Scarlett_WarpRoom {X:17 Y:30}
+[NpcTrackerMod] что-то не так. Custom_Scarlett_WarpRoom {X:17 Y:30}
+[NpcTrackerMod] что-то не так. Custom_Scarlett_WarpRoom {X:17 Y:30}
+[SpaceCore] Scheduler could not find route from Custom_BlueMoonVineyard to Custom_ScarlettHouse while honoring Gender female
+[SpaceCore] Requested path from Custom_BlueMoonVineyard to Custom_ScarlettHouse for Gender Female where no valid path was found, for NPC ScarlettFake.
+[NpcTrackerMod] Invalid input to NpcPathFilter. Custom_Scarlett_WarpRoom System.Collections.Generic.Stack`1[Microsoft.Xna.Framework.Point] 0
+[SpaceCore] Gender Female requested path from Custom_Scarlett_WarpRoom to Custom_ScarlettHouse where no valid path was found, for NPC ScarlettFake.
+[NpcTrackerMod] Invalid input to NpcPathFilter. Custom_Scarlett_WarpRoom System.Collections.Generic.Stack`1[Microsoft.Xna.Framework.Point] 0
+[NpcTrackerMod] что-то не так. Custom_Scarlett_WarpRoom {X:20 Y:29}
+[SpaceCore] Gender Female requested path from Custom_Scarlett_WarpRoom to Custom_ScarlettHouse where no valid path was found, for NPC ScarlettFake.
+[NpcTrackerMod] Invalid input to NpcPathFilter. Custom_Scarlett_WarpRoom System.Collections.Generic.Stack`1[Microsoft.Xna.Framework.Point] 0
+[NpcTrackerMod] что-то не так. Custom_Scarlett_WarpRoom {X:20 Y:29}
+[SpaceCore] Gender Female requested path from Custom_Scarlett_WarpRoom to Custom_ScarlettHouse where no valid path was found, for NPC ScarlettFake.
+[NpcTrackerMod] Invalid input to NpcPathFilter. Custom_Scarlett_WarpRoom System.Collections.Generic.Stack`1[Microsoft.Xna.Framework.Point] 0
+[NpcTrackerMod] что-то не так. Custom_Scarlett_WarpRoom {X:20 Y:29}
+[SpaceCore] Gender Female requested path from Custom_Scarlett_WarpRoom to Custom_ScarlettHouse where no valid path was found, for NPC ScarlettFake.
+[NpcTrackerMod] Invalid input to NpcPathFilter. Custom_Scarlett_WarpRoom System.Collections.Generic.Stack`1[Microsoft.Xna.Framework.Point] 0
+[NpcTrackerMod] что-то не так. Custom_Scarlett_WarpRoom {X:20 Y:29}
+[SpaceCore] Gender Female requested path from Custom_Scarlett_WarpRoom to Custom_ScarlettHouse where no valid path was found, for NPC ScarlettFake.
+[NpcTrackerMod] Invalid input to NpcPathFilter. Custom_Scarlett_WarpRoom System.Collections.Generic.Stack`1[Microsoft.Xna.Framework.Point] 0
+[NpcTrackerMod] что-то не так. Custom_Scarlett_WarpRoom {X:20 Y:29}
+[SpaceCore] Gender Female requested path from Custom_Scarlett_WarpRoom to Custom_ScarlettHouse where no valid path was found, for NPC ScarlettFake.
+[NpcTrackerMod] Invalid input to NpcPathFilter. Custom_Scarlett_WarpRoom System.Collections.Generic.Stack`1[Microsoft.Xna.Framework.Point] 0
+[NpcTrackerMod] что-то не так. Custom_SusanHouse {X:14 Y:41}
+[NpcTrackerMod] что-то не так. Custom_SusanHouse {X:14 Y:41}
+[NpcTrackerMod] что-то не так. Custom_SusanHouse {X:14 Y:41}
+[NpcTrackerMod] что-то не так. Custom_DayEnd_WarpRoom {X:44 Y:22}
