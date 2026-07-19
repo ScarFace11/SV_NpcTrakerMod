@@ -11,10 +11,15 @@ obj/
 # Generated documentation
 Documentation/
 
-
+# Upgrade logs
+UpgradeLog*.htm
 
 # Replit internals
 .cache/
 .replit
 replit.nix
 zipFile.zip
+
+# Misc
+d
+exit
