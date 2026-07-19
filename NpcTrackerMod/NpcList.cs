@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using StardewModdingAPI;
@@ -70,7 +70,10 @@ namespace NpcTrackerMod
         /// <param name="Global">Флаг, указывающий, является ли путь глобальным.</param>
         public void AddNpcPath(NPC npc, Dictionary<string, List<(string, List<Point>)>> pathDictionary, List<(string, List<Point>)> Route)
         {
-            if (npc?.Name == null || npc.Schedule == null || !npc.Schedule.Any()) return;
+            // Проверяем только имя — маршрут уже вычислен и проверен до вызова этого метода.
+            // Нельзя проверять npc.Schedule: у модовых NPC расписание может быть null/пустым,
+            // даже если их маршрут был построен через CustomNpcPaths.
+            if (npc?.Name == null) return;
 
             //Нормально будет использовать для выборки по 1 маршруту из полного текущего списка 
             /*
@@ -209,8 +212,10 @@ namespace NpcTrackerMod
                 .Where(npc => npc != null) // Отфильтровываем возможные null значения
                 .ToList(); // Преобразуем в список
 
-            //if (!FullGlobalList)
-            //    modInstance.CustomNpcPaths.TransferPath();
+            // Передаём кастомные пути модовых NPC, загруженные из JSON-файлов ContentPatcher,
+            // в ProcessNpcGlobalRoute только один раз (при инициализации глобального списка).
+            if (!_isGlobalListInitialized)
+                _modInstance.CustomNpcPaths.TransferPath();
 
             //foreach (var x in NpcTotalGlobalPath)
             //{

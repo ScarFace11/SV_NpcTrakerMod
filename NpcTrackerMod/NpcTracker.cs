@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using StardewModdingAPI;
 using StardewValley;
@@ -83,7 +83,9 @@ namespace NpcTrackerMod
             helper.Events.GameLoop.UpdateTicked += ModEntry.OnUpdateTicked;
             
             helper.Events.Player.Warped += ModEntry.OnPlayerWarped;
-            //CustomNpcPaths.LoadAllModSchedules();
+            // Загружаем расписания модовых NPC из ContentPatcher JSON-файлов при старте,
+            // чтобы данные были готовы к первому DayStarted.
+            CustomNpcPaths.LoadAllModSchedules();
             
         }
 
@@ -169,9 +171,21 @@ namespace NpcTrackerMod
             // Проверка на наличие расписания
             if (!SwitchGetNpcPath) return;
 
-            var pathData = SwitchGlobalNpcPath
-                ? NpcList.GlobalNpcPaths.TryGetValue(npc.Name, out var globalPath) ? globalPath : null
-                : NpcList.NpcTotalToDayPath.TryGetValue(npc.Name, out var dailyPath) ? dailyPath : null;
+            List<(string, List<Microsoft.Xna.Framework.Point>)> pathData = null;
+
+            if (SwitchGlobalNpcPath)
+            {
+                NpcList.GlobalNpcPaths.TryGetValue(npc.Name, out pathData);
+            }
+            else
+            {
+                // Сначала пробуем дневной путь. Если его нет (модовые NPC часто попадают
+                // только в GlobalNpcPaths через CustomNpcPaths.TransferPath) — берём глобальный.
+                if (!NpcList.NpcTotalToDayPath.TryGetValue(npc.Name, out pathData) || pathData == null)
+                {
+                    NpcList.GlobalNpcPaths.TryGetValue(npc.Name, out pathData);
+                }
+            }
 
             if (pathData == null)
             {
