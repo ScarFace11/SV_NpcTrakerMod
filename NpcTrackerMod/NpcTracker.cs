@@ -88,17 +88,15 @@ namespace NpcTrackerMod
             helper.Events.GameLoop.DayEnding += ModEntry.OnDayEnding;
             helper.Events.GameLoop.UpdateTicked += ModEntry.OnUpdateTicked;
             helper.Events.Player.Warped += ModEntry.OnPlayerWarped;
-<<<<<<< HEAD
-            // Загружаем расписания модовых NPC из ContentPatcher JSON-файлов при старте,
-            // чтобы данные были готовы к первому DayStarted.
-            CustomNpcPaths.LoadAllModSchedules();
-            
-=======
 
             // Загружаем расписания модовых NPC из ContentPatcher JSON-файлов при старте,
             // чтобы данные были готовы к первому DayStarted.
             CustomNpcPaths.LoadAllModSchedules();
->>>>>>> main
+            
+
+            // Загружаем расписания модовых NPC из ContentPatcher JSON-файлов при старте,
+            // чтобы данные были готовы к первому DayStarted.
+            CustomNpcPaths.LoadAllModSchedules();
         }
 
         /// <summary> Сохраняет конфигурацию в config.json. </summary>
@@ -193,7 +191,6 @@ namespace NpcTrackerMod
         /// </summary>
         private void DrawNpcRoute(NPC npc)
         {
-<<<<<<< HEAD
             // Проверка на наличие расписания
             if (!SwitchGetNpcPath) return;
 
@@ -214,13 +211,9 @@ namespace NpcTrackerMod
             }
 
             if (pathData == null)
-=======
             try
->>>>>>> main
             {
                 if (!SwitchGetNpcPath || npc == null) return;
-
-                List<(string, List<Microsoft.Xna.Framework.Point>)> pathData = null;
                 string timeLabel = null;
 
                 if (SwitchGlobalNpcPath)
