@@ -1,550 +1,617 @@
-﻿using StardewValley.Menus;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using StardewValley;
-using StardewValley.BellsAndWhistles;
+using Microsoft.Xna.Framework.Input;
 using StardewModdingAPI;
+using StardewValley;
+using StardewValley.Menus;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace NpcTrackerMod
 {
     /// <summary>
-    /// Класс для создания меню отслеживания NPC с различными настройками и функционалом.
+    /// Главное меню мода для отслеживания NPC.
+    /// Вкладки: Main (основные переключатели), Settings (клавиши + фильтр времени), Info.
     /// </summary>
     public class TrackingMenu : IClickableMenu
     {
-        private static int MENU_X = (int)(Game1.viewport.Width * Game1.options.zoomLevel * (1 / Game1.options.uiScale)) / 2 - (MENU_WIDTH / 2);
-        private static int MENU_Y = (int)(Game1.viewport.Height * Game1.options.zoomLevel * (1 / Game1.options.uiScale)) / 2 - (MENU_HEIGHT / 2);
-        private const int MENU_WIDTH = 600;
-        private const int MENU_HEIGHT = 600;
+        // ── Константы ────────────────────────────────────────────────────────────
+        private const int MENU_WIDTH     = 600;
+        private const int MENU_HEIGHT    = 600;
+        private const int TAB_HEIGHT     = 40;
+        private const int CHECKBOX_SPACING = 50;
+        private const int BUTTON_SIZE    = 30;
 
-        private int _activeTabIndex; // Индекс активной вкладки
-        private readonly List<string> _tabs = new List<string> { "Main", "Settings" }; // Список вкладок
-        private ClickableTextureComponent _tabLeftButton;
-        private ClickableTextureComponent _tabRightButton;
+        // ── Компоненты ───────────────────────────────────────────────────────────
+        private readonly List<UIComponent>       _components = new List<UIComponent>();
+        private readonly List<ClickableCheckbox> _checkboxes = new List<ClickableCheckbox>();
+        private readonly List<TabInfo>           _tabs       = new List<TabInfo>();
+        private int _activeTabIndex = 0;
 
-        private ClickableCheckbox SwitchEnableDisplayCheckbox;     
-        private ClickableCheckbox SwitchDisplayGridCheckbox;     
-        private ClickableCheckbox SwitchTargetNPCCheckbox;
-        private ClickableCheckbox SwitchGlobalPathCheckbox;
-        private ClickableCheckbox SwitchTargetLocationsCheckbox;
-
-        private List<ClickableCheckbox> _checkboxes;
-
-        private ClickableTextureComponent _exitButton;
-        private ClickableTextureComponent _leftArrowButton;
-        private ClickableTextureComponent _rightArrowButton;
-        
-        private string _displayText;
-
+        // ── Ссылки ───────────────────────────────────────────────────────────────
         private readonly _modInstance _modInstance;
+        private ClickableTextureComponent _closeButton;
+        private ClickableTextureComponent _prevTabButton;
+        private ClickableTextureComponent _nextTabButton;
+
+        // ── Состояние вкладки Settings ───────────────────────────────────────────
+        /// <summary> "menu" или "debug" — ожидаем клавишу для переназначения. null — не ждём. </summary>
+        private string _rebindTarget = null;
+
+        private static readonly int[] _timeSteps =
+        {
+            -1,
+            600, 700, 800, 900, 1000, 1100, 1200,
+            1300, 1400, 1500, 1600, 1700, 1800,
+            1900, 2000, 2100, 2200, 2300, 2400, 2500, 2600
+        };
+        private int _timeFilterIndex = 0;
+
+        // ── Конструктор ──────────────────────────────────────────────────────────
+        public TrackingMenu(_modInstance modInstance)
+            : base(0, 0, MENU_WIDTH, MENU_HEIGHT)
+        {
+            _modInstance = modInstance ?? throw new ArgumentNullException(nameof(modInstance));
+
+            // Синхронизируем индекс слайдера времени с текущим состоянием мода
+            int idx = Array.IndexOf(_timeSteps, _modInstance.TimeFilter);
+            _timeFilterIndex = idx >= 0 ? idx : 0;
+
+            InitializePosition();
+            InitializeTabs();
+            InitializeComponents();
+        }
+
+        // ── Инициализация ────────────────────────────────────────────────────────
+
+        private void InitializePosition()
+        {
+            Rectangle viewport = new Rectangle(
+                Game1.viewport.X, Game1.viewport.Y,
+                Game1.viewport.Width, Game1.viewport.Height);
+
+            xPositionOnScreen = viewport.Width  / 2 - MENU_WIDTH  / 2;
+            yPositionOnScreen = viewport.Height / 2 - MENU_HEIGHT / 2;
+        }
+
+        private void InitializeTabs()
+        {
+            _tabs.Add(new TabInfo("Main",     InitializeMainTab));
+            _tabs.Add(new TabInfo("Settings", InitializeSettingsTab));
+            _tabs.Add(new TabInfo("Info",     InitializeInfoTab));
+        }
+
+        private void InitializeComponents()
+        {
+            _components.Clear();
+            _checkboxes.Clear();
+
+            _closeButton = new ClickableTextureComponent(
+                new Rectangle(xPositionOnScreen + width - 48, yPositionOnScreen - 8, 48, 48),
+                Game1.mouseCursors, new Rectangle(337, 494, 12, 12), 4f);
+
+            _prevTabButton = new ClickableTextureComponent(
+                new Rectangle(xPositionOnScreen + 20, yPositionOnScreen - TAB_HEIGHT, BUTTON_SIZE, BUTTON_SIZE),
+                Game1.mouseCursors, new Rectangle(352, 495, 12, 11), 2f);
+
+            _nextTabButton = new ClickableTextureComponent(
+                new Rectangle(xPositionOnScreen + width - 50, yPositionOnScreen - TAB_HEIGHT, BUTTON_SIZE, BUTTON_SIZE),
+                Game1.mouseCursors, new Rectangle(365, 495, 12, 11), 2f);
+
+            InitializeActiveTab();
+        }
+
+        private void InitializeActiveTab()
+        {
+            if (_activeTabIndex >= 0 && _activeTabIndex < _tabs.Count)
+                _tabs[_activeTabIndex].InitializeAction?.Invoke();
+        }
 
         /// <summary>
-        /// Конструктор для создания нового меню отслеживания NPC.
+        /// Главная вкладка: включение, сетка, выбор NPC, локации, маршруты.
         /// </summary>
-        public TrackingMenu(_modInstance modInstance)
-            : base(
-                MENU_X,
-                MENU_Y,
-                MENU_WIDTH,
-                MENU_HEIGHT,
-                true)
+        private void InitializeMainTab()
         {
-            _modInstance = modInstance;
-            InitializeComponents();
+            int yOffset = yPositionOnScreen + 80;
+
+            _checkboxes.Add(new ClickableCheckbox(
+                new Rectangle(xPositionOnScreen + 30, yOffset, 300, 40),
+                "Включение", _modInstance.EnableDisplay,
+                v => _modInstance.EnableDisplay = v));
+            yOffset += CHECKBOX_SPACING;
+
+            _checkboxes.Add(new ClickableCheckbox(
+                new Rectangle(xPositionOnScreen + 30, yOffset, 300, 40),
+                "Отображение сетки", _modInstance.DisplayGrid,
+                v => _modInstance.DisplayGrid = v));
+            yOffset += CHECKBOX_SPACING;
+
+            _checkboxes.Add(new ClickableCheckbox(
+                new Rectangle(xPositionOnScreen + 30, yOffset, 300, 40),
+                "Выбор NPC", _modInstance.SwitchTargetNPC,
+                v =>
+                {
+                    _modInstance.SwitchTargetNPC = v;
+                    if (!v) _modInstance.NpcList.CurrentNpcName = null;
+                    else    _modInstance.NpcSelected = 0;
+                    _modInstance.DrawTiles.ClearTiles();
+                    _modInstance.NpcList.CurrentNpcList.Clear();
+                    _modInstance.SwitchGetNpcPath = true;
+                    _modInstance.SwitchListFull   = false;
+                }));
+            yOffset += CHECKBOX_SPACING * 2;
+
+            _checkboxes.Add(new ClickableCheckbox(
+                new Rectangle(xPositionOnScreen + 30, yOffset, 300, 40),
+                "Отображение всех локаций", _modInstance.SwitchTargetLocations,
+                v =>
+                {
+                    _modInstance.SwitchTargetLocations = v;
+                    _modInstance.DrawTiles.ClearTiles();
+                    _modInstance.SwitchGetNpcPath = true;
+                    _modInstance.NpcList.CurrentNpcList.Clear();
+                    _modInstance.SwitchListFull = false;
+
+                    if (v && _modInstance.NpcList.CurrentNpcName != null)
+                        _modInstance.NpcSelected = _modInstance.NpcList.CurrentNpcList.IndexOf(_modInstance.NpcList.CurrentNpcName);
+                    else if (!v)
+                        EnsureValidNpcSelection();
+                }));
+            yOffset += CHECKBOX_SPACING;
+
+            _checkboxes.Add(new ClickableCheckbox(
+                new Rectangle(xPositionOnScreen + 30, yOffset, 300, 40),
+                "Отображение всех маршрутов", _modInstance.SwitchGlobalNpcPath,
+                v =>
+                {
+                    _modInstance.SwitchGlobalNpcPath = v;
+                    _modInstance.DrawTiles.ClearTiles();
+                    _modInstance.SwitchGetNpcPath = true;
+                }));
+
+            // Кнопки выбора NPC
+            var leftArrow = new ClickableTextureComponent(
+                new Rectangle(xPositionOnScreen + 30, yPositionOnScreen + 230, BUTTON_SIZE, BUTTON_SIZE),
+                Game1.mouseCursors, new Rectangle(352, 495, 12, 11), 4f);
+            var rightArrow = new ClickableTextureComponent(
+                new Rectangle(xPositionOnScreen + 350, yPositionOnScreen + 230, BUTTON_SIZE, BUTTON_SIZE),
+                Game1.mouseCursors, new Rectangle(365, 495, 12, 11), 4f);
+
+            _components.Add(new UIButton(leftArrow,  () => HandleArrowClick(-1)));
+            _components.Add(new UIButton(rightArrow, () => HandleArrowClick(1)));
+        }
+
+        /// <summary>
+        /// Вкладка настроек: переназначение клавиш + фильтр по времени.
+        /// </summary>
+        private void InitializeSettingsTab()
+        {
+            int yOffset = yPositionOnScreen + 110;
+
+            // ── Горячие клавиши ──────────────────────────────────────────────────
+            // Кнопка переназначения клавиши меню
+            string menuBtnLabel  = _rebindTarget == "menu"  ? "Нажмите клавишу" : "Изменить";
+            string debugBtnLabel = _rebindTarget == "debug" ? "Нажмите клавишу" : "Изменить";
+
+            _components.Add(new UITextButton(
+                new Rectangle(xPositionOnScreen + width - 180, yOffset, 150, 36),
+                menuBtnLabel,
+                () => StartRebind("menu")));
+            yOffset += 50;
+
+            _components.Add(new UITextButton(
+                new Rectangle(xPositionOnScreen + width - 180, yOffset, 150, 36),
+                debugBtnLabel,
+                () => StartRebind("debug")));
+            yOffset += 90;
+
+            // ── Фильтр по времени ────────────────────────────────────────────────
+            _components.Add(new UIButton(
+                new ClickableTextureComponent(
+                    new Rectangle(xPositionOnScreen + 30, yOffset + 5, BUTTON_SIZE, BUTTON_SIZE),
+                    Game1.mouseCursors, new Rectangle(352, 495, 12, 11), 2f),
+                () => ChangeTimeFilter(-1)));
+
+            _components.Add(new UIButton(
+                new ClickableTextureComponent(
+                    new Rectangle(xPositionOnScreen + width - 60, yOffset + 5, BUTTON_SIZE, BUTTON_SIZE),
+                    Game1.mouseCursors, new Rectangle(365, 495, 12, 11), 2f),
+                () => ChangeTimeFilter(1)));
+        }
+
+        private void InitializeInfoTab()
+        {
+            // Статистика — только отрисовка, без кликабельных элементов
+        }
+
+        // ── Вспомогательные методы ───────────────────────────────────────────────
+
+        private void HandleArrowClick(int direction)
+        {
+            if (!_modInstance.SwitchTargetNPC || !_modInstance.NpcList.CurrentNpcList.Any())
+                return;
+
+            var npcList = _modInstance.NpcList.CurrentNpcList;
+            _modInstance.NpcSelected = MathHelper.Clamp(
+                _modInstance.NpcSelected + direction, 0, npcList.Count - 1);
+            _modInstance.NpcList.CurrentNpcName = _modInstance.NpcList.GetNpcFromList();
+            _modInstance.DrawTiles.ClearTiles();
+            _modInstance.SwitchGetNpcPath = true;
+        }
+
+        private void EnsureValidNpcSelection()
+        {
+            if (!_modInstance.NpcList.CurrentNpcList.Any() ||
+                _modInstance.NpcSelected >= _modInstance.NpcList.CurrentNpcList.Count)
+                _modInstance.NpcSelected = 0;
+        }
+
+        /// <summary>
+        /// Начинает режим ожидания нажатия клавиши для переназначения.
+        /// </summary>
+        private void StartRebind(string target)
+        {
+            _rebindTarget = target;
+            InitializeComponents(); // перерисовываем кнопки с надписью "Нажмите клавишу"
+        }
+
+        /// <summary>
+        /// Сдвигает фильтр времени на шаг (direction: -1 / +1).
+        /// </summary>
+        private void ChangeTimeFilter(int direction)
+        {
+            _timeFilterIndex = MathHelper.Clamp(
+                _timeFilterIndex + direction, 0, _timeSteps.Length - 1);
+            _modInstance.TimeFilter = _timeSteps[_timeFilterIndex];
+            _modInstance.DrawTiles.ClearTiles();
+            _modInstance.SwitchGetNpcPath = true;
+        }
+
+        private static string FormatGameTime(int gameTime)
+        {
+            return $"{gameTime / 100:D2}:{gameTime % 100:D2}";
+        }
+
+        // ── Отрисовка ────────────────────────────────────────────────────────────
+
+        public override void draw(SpriteBatch b)
+        {
+            try
+            {
+                // Фон
+                drawTextureBox(b, Game1.menuTexture, new Rectangle(0, 256, 60, 60),
+                    xPositionOnScreen, yPositionOnScreen, width, height, Color.White, 1f, true);
+
+                // Заголовок
+                string title = $"NPC Tracker - {_tabs[_activeTabIndex].Name}";
+                Vector2 titleSize = Game1.dialogueFont.MeasureString(title);
+                Utility.drawTextWithShadow(b, title, Game1.dialogueFont,
+                    new Vector2(xPositionOnScreen + (width - titleSize.X) / 2, yPositionOnScreen + 20),
+                    Game1.textColor);
+
+                // Имя вкладки
+                string tabName = _tabs[_activeTabIndex].Name;
+                Vector2 tabSize = Game1.smallFont.MeasureString(tabName);
+                Utility.drawTextWithShadow(b, tabName, Game1.smallFont,
+                    new Vector2(xPositionOnScreen + (width - tabSize.X) / 2, yPositionOnScreen - TAB_HEIGHT + 10),
+                    Color.Gold);
+
+                _prevTabButton.draw(b);
+                _nextTabButton.draw(b);
+
+                DrawActiveTabContent(b);
+
+                _closeButton.draw(b);
+                drawMouse(b);
+            }
+            catch (Exception ex)
+            {
+                _modInstance.Monitor.Log($"Ошибка отрисовки меню: {ex.Message}", LogLevel.Error);
+                base.draw(b);
+                drawMouse(b);
+            }
+        }
+
+        private void DrawActiveTabContent(SpriteBatch b)
+        {
+            switch (_activeTabIndex)
+            {
+                case 0: DrawMainTab(b);     break;
+                case 1: DrawSettingsTab(b); break;
+                case 2: DrawInfoTab(b);     break;
+            }
+        }
+
+        private void DrawMainTab(SpriteBatch b)
+        {
+            foreach (var checkbox in _checkboxes)
+                checkbox.Draw(b);
+            foreach (var component in _components)
+                component.Draw(b);
+
+            if (_modInstance.SwitchTargetNPC && _modInstance.NpcList.CurrentNpcList.Any())
+            {
+                string npcName = _modInstance.NpcList.GetNpcFromList();
+                if (!string.IsNullOrEmpty(npcName))
+                    Utility.drawTextWithShadow(b, $"Выбран: {npcName}", Game1.dialogueFont,
+                        new Vector2(xPositionOnScreen + 100, yPositionOnScreen + 230), Color.Black);
+            }
+        }
+
+        /// <summary>
+        /// Отрисовка вкладки настроек: горячие клавиши + фильтр по времени.
+        /// </summary>
+        private void DrawSettingsTab(SpriteBatch b)
+        {
+            int yOffset = yPositionOnScreen + 60;
+
+            // ── Горячие клавиши ──────────────────────────────────────────────────
+            Utility.drawTextWithShadow(b, "Горячие клавиши",
+                Game1.dialogueFont, new Vector2(xPositionOnScreen + 30, yOffset), Game1.textColor);
+            yOffset += 45;
+
+            // Клавиша меню
+            string menuKeyLabel = _rebindTarget == "menu"
+                ? "Открыть меню: [Нажмите клавишу...]"
+                : $"Открыть меню: {_modInstance.Config.MenuKey}";
+            Utility.drawTextWithShadow(b, menuKeyLabel, Game1.smallFont,
+                new Vector2(xPositionOnScreen + 30, yOffset + 12), Game1.textColor);
+            yOffset += 50;
+
+            // Клавиша отладки
+            string debugKeyLabel = _rebindTarget == "debug"
+                ? "Отладка: [Нажмите клавишу...]"
+                : $"Отладка: {_modInstance.Config.DebugKey}";
+            Utility.drawTextWithShadow(b, debugKeyLabel, Game1.smallFont,
+                new Vector2(xPositionOnScreen + 30, yOffset + 12), Game1.textColor);
+            yOffset += 90;
+
+            // ── Фильтр по времени ────────────────────────────────────────────────
+            Utility.drawTextWithShadow(b, "Фильтр по времени",
+                Game1.dialogueFont, new Vector2(xPositionOnScreen + 30, yOffset), Game1.textColor);
+            yOffset += 45;
+
+            string timeText = _modInstance.TimeFilter < 0
+                ? "Всё время"
+                : FormatGameTime(_modInstance.TimeFilter);
+
+            Vector2 timeSize = Game1.dialogueFont.MeasureString(timeText);
+            Utility.drawTextWithShadow(b, timeText, Game1.dialogueFont,
+                new Vector2(xPositionOnScreen + (width - timeSize.X) / 2, yOffset + 5),
+                Color.Gold);
+
+            // Кнопки (стрелки и кнопки переназначения)
+            foreach (var component in _components)
+                component.Draw(b);
+        }
+
+        private void DrawInfoTab(SpriteBatch b)
+        {
+            string infoText =
+                $"NPC Tracker Mod v1.0\n" +
+                $"Отслеживаемых NPC: {_modInstance.NpcList.TotalNpcList?.Count ?? 0}\n" +
+                $"Текущая локация: {Game1.currentLocation?.Name ?? "Неизвестно"}";
+
+            Utility.drawTextWithShadow(b, infoText, Game1.dialogueFont,
+                new Vector2(xPositionOnScreen + 50, yPositionOnScreen + 80), Game1.textColor);
+        }
+
+        // ── Обработка ввода ──────────────────────────────────────────────────────
+
+        public override void receiveLeftClick(int x, int y, bool playSound = true)
+        {
+            try
+            {
+                base.receiveLeftClick(x, y, playSound);
+
+                if (_closeButton.containsPoint(x, y))
+                {
+                    exitThisMenu();
+                    if (playSound) Game1.playSound("bigDeSelect");
+                    return;
+                }
+
+                if (_prevTabButton.containsPoint(x, y))
+                {
+                    SwitchTab(-1);
+                    if (playSound) Game1.playSound("shwip");
+                    return;
+                }
+
+                if (_nextTabButton.containsPoint(x, y))
+                {
+                    SwitchTab(1);
+                    if (playSound) Game1.playSound("shwip");
+                    return;
+                }
+
+                foreach (var checkbox in _checkboxes)
+                {
+                    if (checkbox.ContainsPoint(x, y))
+                    {
+                        checkbox.Toggle();
+                        if (playSound) Game1.playSound("drumkit6");
+                        return;
+                    }
+                }
+
+                foreach (var component in _components)
+                {
+                    if (component.ContainsPoint(x, y))
+                    {
+                        component.OnClick?.Invoke();
+                        if (playSound) Game1.playSound("smallSelect");
+                        return;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _modInstance.Monitor.Log($"Ошибка обработки клика: {ex.Message}", LogLevel.Error);
+            }
+        }
+
+        /// <summary>
+        /// Перехватывает нажатие клавиши при активном режиме переназначения.
+        /// </summary>
+        public override void receiveKeyPress(Keys key)
+        {
+            if (_rebindTarget != null)
+            {
+                if (key != Keys.Escape)
+                {
+                    var pressed = (StardewModdingAPI.SButton)(int)key;
+                    if (_rebindTarget == "menu")
+                        _modInstance.Config.MenuKey = pressed;
+                    else if (_rebindTarget == "debug")
+                        _modInstance.Config.DebugKey = pressed;
+                    _modInstance.SaveConfig();
+                }
+                _rebindTarget = null;
+                InitializeComponents();
+                return;
+            }
+            base.receiveKeyPress(key);
+        }
+
+        public override void performHoverAction(int x, int y)
+        {
+            base.performHoverAction(x, y);
+        }
+
+        private void SwitchTab(int direction)
+        {
+            int newIndex = MathHelper.Clamp(_activeTabIndex + direction, 0, _tabs.Count - 1);
+            if (newIndex != _activeTabIndex)
+            {
+                _activeTabIndex = newIndex;
+                InitializeComponents();
+            }
         }
 
         public override void gameWindowSizeChanged(Rectangle oldBounds, Rectangle newBounds)
         {
             base.gameWindowSizeChanged(oldBounds, newBounds);
-
-            // Обновите позиции всех элементов
-            xPositionOnScreen = Game1.viewport.Width / 2 - width / 2;
-            yPositionOnScreen = Game1.viewport.Height / 2 - height / 2;
-
-            // Пересоздайте компоненты с новыми координатами
+            InitializePosition();
             InitializeComponents();
         }
 
-        /// <summary>
-        /// Инициализирует компоненты меню, включая кнопки и чекбоксы.
-        /// </summary>
-        private void InitializeComponents()
+        // ── Внутренние классы ────────────────────────────────────────────────────
+
+        private class TabInfo
         {
-            InitializeTabs();
-
-            // Exit button
-            _exitButton = CreateExitButton();
-
-            // Checkboxes
-
-            //SwitchEnableDisplayCheckbox = CreateCheckbox(100, "Включение", _modInstance.EnableDisplay);
-            //SwitchDisplayGridCheckbox = CreateCheckbox(350, "Отображение сетки", _modInstance.DisplayGrid);
-            //SwitchTargetLocationsCheckbox = CreateCheckbox(150, "Отображение всех локаций", _modInstance.SwitchTargetLocations);
-            //SwitchTargetNPCCheckbox = CreateCheckbox(200, "Выбор NPC", _modInstance.SwitchTargetNPC);
-            //SwitchGlobalPathCheckbox = CreateCheckbox(250, "Отображение всех маршрутов", _modInstance.SwitchGlobalNpcPath);
-
-            _checkboxes = new List<ClickableCheckbox>
+            public string Name { get; }
+            public Action InitializeAction { get; }
+            public TabInfo(string name, Action initializeAction)
             {
-                CreateCheckbox(100, "Включение", _modInstance.EnableDisplay),
-                CreateCheckbox(150, "Отображение сетки", _modInstance.DisplayGrid),
-                CreateCheckbox(200, "Выбор NPC", _modInstance.SwitchTargetNPC),
-                CreateCheckbox(300, "Отображение всех локаций", _modInstance.SwitchTargetLocations),
-                CreateCheckbox(350, "Отображение всех маршрутов", _modInstance.SwitchGlobalNpcPath),
-                
-            };
-
-            // Arrow buttons
-            _leftArrowButton = CreateArrowButton(xPositionOnScreen + 30, yPositionOnScreen + 250, 352, 495);
-            _rightArrowButton = CreateArrowButton(xPositionOnScreen + 250, yPositionOnScreen + 250, 365, 495);
+                Name = name;
+                InitializeAction = initializeAction;
+            }
         }
 
-        /// <summary>
-        /// Инициализация вкладок.
-        /// </summary>
-        private void InitializeTabs()
+        private class UIComponent
         {
-            _tabLeftButton = new ClickableTextureComponent(
-                new Rectangle(xPositionOnScreen + 20, yPositionOnScreen - 40, 30, 30),
-                Game1.mouseCursors,
-                new Rectangle(352, 495, 12, 11),
-                2f
-            );
+            public ClickableTextureComponent TextureComponent { get; }
+            public Action OnClick { get; set; }
 
-            _tabRightButton = new ClickableTextureComponent(
-                new Rectangle(xPositionOnScreen + width - 50, yPositionOnScreen - 40, 30, 30),
-                Game1.mouseCursors,
-                new Rectangle(365, 495, 12, 11),
-                2f
-            );
-        }
-
-        private ClickableTextureComponent CreateExitButton()
-        {
-            return new ClickableTextureComponent(
-                new Rectangle(xPositionOnScreen + width - 80, yPositionOnScreen + 30, 30, 30),
-                Game1.mouseCursors,
-                new Rectangle(337, 494, 12, 12),
-                4f
-            );
-        }
-
-        private ClickableCheckbox CreateCheckbox(int offsetY, string label, bool isChecked)
-        {
-            return new ClickableCheckbox(
-                new Rectangle(xPositionOnScreen + 30, yPositionOnScreen + offsetY, 300, 50),
-                label,
-                isChecked
-            );
-        }
-
-        /// <summary>
-        /// Создает кнопку с изображением стрелки.
-        /// </summary>
-        /// <param name="x">Координата X для кнопки.</param>
-        /// <param name="y">Координата Y для кнопки.</param>
-        /// <param name="sourceX">X координата исходного изображения.</param>
-        /// <param name="sourceY">Y координата исходного изображения.</param>
-        /// <returns>Возвращает объект ClickableTextureComponent для кнопки стрелки.</returns>
-        private ClickableTextureComponent CreateArrowButton(int x, int y, int sourceX, int sourceY)
-        {
-            return new ClickableTextureComponent(
-                new Rectangle(x, y, 50, 50),
-                Game1.mouseCursors,
-                new Rectangle(sourceX, sourceY, 12, 11),
-                4f
-            );
-        }
-
-        /// <summary>
-        /// Отрисовывает меню и его компоненты.
-        /// </summary>
-        /// <param name="b">SpriteBatch, используемый для отрисовки элементов.</param>
-        public override void draw(SpriteBatch b)
-        {
-            DrawBackground(b);
-            DrawComponents(b);
-            drawMouse(b);
-        }
-
-        /// <summary>
-        /// Отрисовывает фон меню.
-        /// </summary>
-        /// <param name="b">SpriteBatch, используемый для отрисовки фона.</param>
-        private void DrawBackground(SpriteBatch b)
-        {
-            drawTextureBox(b, Game1.menuTexture, new Rectangle(0, 256, 60, 60), xPositionOnScreen, yPositionOnScreen, width, height, Color.White, 1f, true);
-            SpriteText.drawString(b, "NPC Tracker Menu", xPositionOnScreen + 100, yPositionOnScreen + 40);
-        }
-
-        private void DrawComponents(SpriteBatch b)
-        {
-            DrawTabs(b);
-
-            if (_activeTabIndex == 0) // Главная вкладка
+            public UIComponent(ClickableTextureComponent textureComponent, Action onClick = null)
             {
-                foreach (var checkbox in _checkboxes)
+                TextureComponent = textureComponent;
+                OnClick = onClick;
+            }
+
+            public virtual bool ContainsPoint(int x, int y) =>
+                TextureComponent?.containsPoint(x, y) ?? false;
+
+            public virtual void Draw(SpriteBatch batch)
+            {
+                TextureComponent?.draw(batch);
+            }
+        }
+
+        private class UIButton : UIComponent
+        {
+            public UIButton(ClickableTextureComponent textureComponent, Action onClick)
+                : base(textureComponent, onClick) { }
+        }
+
+        /// <summary>
+        /// Кнопка с текстовой подписью. Используется для кнопок переназначения клавиш.
+        /// </summary>
+        private class UITextButton : UIComponent
+        {
+            private readonly Rectangle _bounds;
+            private readonly string    _label;
+
+            public UITextButton(Rectangle bounds, string label, Action onClick)
+                : base(new ClickableTextureComponent(bounds, null, Rectangle.Empty, 1f), onClick)
+            {
+                _bounds = bounds;
+                _label  = label;
+            }
+
+            public override bool ContainsPoint(int x, int y) => _bounds.Contains(x, y);
+
+            public override void Draw(SpriteBatch batch)
+            {
+                IClickableMenu.drawTextureBox(batch, Game1.menuTexture,
+                    new Rectangle(0, 256, 60, 60),
+                    _bounds.X, _bounds.Y, _bounds.Width, _bounds.Height,
+                    Color.White, 0.5f, false);
+
+                Vector2 sz = Game1.smallFont.MeasureString(_label);
+                Utility.drawTextWithShadow(batch, _label, Game1.smallFont,
+                    new Vector2(
+                        _bounds.X + (_bounds.Width  - sz.X) / 2,
+                        _bounds.Y + (_bounds.Height - sz.Y) / 2),
+                    Game1.textColor);
+            }
+        }
+
+        private class ClickableCheckbox
+        {
+            public Rectangle Bounds   { get; }
+            public string    Label    { get; }
+            public bool      IsChecked { get; private set; }
+
+            private readonly Action<bool> _onToggle;
+
+            public ClickableCheckbox(Rectangle bounds, string label, bool initialState, Action<bool> onToggle)
+            {
+                Bounds    = bounds;
+                Label     = label;
+                IsChecked = initialState;
+                _onToggle = onToggle;
+            }
+
+            public bool ContainsPoint(int x, int y) => Bounds.Contains(x, y);
+
+            public void Toggle()
+            {
+                IsChecked = !IsChecked;
+                _onToggle?.Invoke(IsChecked);
+            }
+
+            public void Draw(SpriteBatch batch)
+            {
+                try
                 {
-                    checkbox.draw(b, checkbox.label);
+                    var texture    = Game1.mouseCursors_1_6;
+                    var sourceRect = IsChecked
+                        ? new Rectangle(291, 253, 9, 9)
+                        : new Rectangle(273, 253, 9, 9);
+
+                    batch.Draw(texture, new Vector2(Bounds.X, Bounds.Y), sourceRect,
+                        Color.White, 0f, Vector2.Zero, 5f, SpriteEffects.None, 0.4f);
+
+                    Vector2 textPos = new Vector2(
+                        Bounds.X + 70,
+                        Bounds.Y + Bounds.Height / 2 - Game1.dialogueFont.MeasureString(Label).Y / 2);
+
+                    Utility.drawTextWithShadow(batch, Label, Game1.dialogueFont, textPos, Game1.textColor);
                 }
-
-                _leftArrowButton.draw(b);
-                _rightArrowButton.draw(b);
-            }
-            else if (_activeTabIndex == 1) // Настройки
-            {
-                // Добавьте компоненты второй вкладки здесь
-                DrawSettingsComponents(b);
-            }
-
-            //SwitchEnableDisplayCheckbox.draw(b, "Display");
-            //SwitchDisplayGridCheckbox.draw(b, "Grid");
-            //SwitchTargetLocationsCheckbox.draw(b, "Locations");
-            //SwitchTargetNPCCheckbox.draw(b, "TargetNpc");
-            //SwitchGlobalPathCheckbox.draw(b, "GlobalPath");
-
-            //foreach (var checkbox in _checkboxes)
-            //{
-            //    checkbox.draw(b, checkbox.label);
-            //}
-
-            //_leftArrowButton.draw(b);
-            //_rightArrowButton.draw(b);
-
-            _exitButton.draw(b);
-            DrawSelectedNpcText(b);
-        }
-
-        /// <summary>
-        /// Отрисовка вкладок.
-        /// </summary>
-        private void DrawTabs(SpriteBatch b)
-        {
-            SpriteText.drawString(b, _tabs[_activeTabIndex], xPositionOnScreen + width / 2 - 50, yPositionOnScreen - 50);
-            _tabLeftButton.draw(b);
-            _tabRightButton.draw(b);
-        }
-
-        private void DrawSettingsComponents(SpriteBatch b)
-        {
-            // Добавьте отрисовку элементов второй вкладки
-            Utility.drawTextWithShadow(b, "Settings Page", Game1.dialogueFont, new Vector2(xPositionOnScreen + 50, yPositionOnScreen + 100), Game1.textColor);
-        }
-
-        private void HandleSettingsClick(int x, int y)
-        {
-            // Логика обработки кликов для второй вкладки
-        }
-
-        /// <summary>
-        /// Отрисовывает имя выбранного NPC.
-        /// </summary>
-        /// <param name="b">SpriteBatch, используемый для отрисовки текста NPC.</param>
-        private void DrawSelectedNpcText(SpriteBatch b)
-        {
-            _displayText = _modInstance.SwitchTargetNPC && _modInstance.NpcList.CurrentNpcList.Any()
-                ? _modInstance.NpcList.GetNpcFromList()
-                : "Npc Name";
-
-            Utility.drawTextWithShadow(b, _displayText, Game1.dialogueFont, new Vector2(xPositionOnScreen + 100, yPositionOnScreen + 260), Game1.textColor);
-        }
-
-        /// <summary>
-        /// Обрабатывает клик по элементам меню.
-        /// </summary>
-        /// <param name="x">Координата X клика.</param>
-        /// <param name="y">Координата Y клика.</param>
-        /// <param name="playSound">Если true, проигрывается звук клика.</param>
-        public override void receiveLeftClick(int x, int y, bool playSound = true)
-        {
-            base.receiveLeftClick(x, y, playSound);
-
-            // Обработка нажатия на кнопку выхода
-            if (_exitButton.containsPoint(x, y))
-            {
-                exitThisMenu();
-                return;
-            }
-
-            if (_tabLeftButton.containsPoint(x, y))
-            {
-                _activeTabIndex = MathHelper.Clamp(_activeTabIndex - 1, 0, _tabs.Count - 1);
-                return;
-            }
-
-            if (_tabRightButton.containsPoint(x, y))
-            {
-                _activeTabIndex = MathHelper.Clamp(_activeTabIndex + 1, 0, _tabs.Count - 1);
-                return;
-            }
-
-            if (_activeTabIndex == 0)
-            {
-                if ((_leftArrowButton.containsPoint(x, y) || _rightArrowButton.containsPoint(x, y)) && _modInstance.SwitchTargetNPC)
-                    HandleArrowButtonClick(x, y);
-
-                foreach (var checkbox in _checkboxes)
-                {
-                    if (checkbox.containsPoint(x, y))
-                    {
-                        ToggleCheckbox(checkbox);
-                        break;
-                    }
-                }
-            }
-            else if (_activeTabIndex == 1)
-            {
-                HandleSettingsClick(x, y); // Логика кликов для второй вкладки
-            }
-
-            //if ((_leftArrowButton.containsPoint(x,y) || _rightArrowButton.containsPoint(x,y)) && _modInstance.SwitchTargetNPC) 
-            //    HandleArrowButtonClick(x, y);
-
-            //HandleCheckBoxClick(x, y);
-
-            //foreach (var checkbox in _checkboxes)
-            //{
-            //    if (checkbox.containsPoint(x, y))
-            //    {
-            //        ToggleCheckbox(checkbox);
-            //        break;
-            //    }
-            //}
-        }
-
-        private void ToggleCheckbox(ClickableCheckbox checkbox)
-        {
-            checkbox.isChecked = !checkbox.isChecked;
-
-            switch (checkbox.label)
-            {
-                case "Включение":
-                    _modInstance.EnableDisplay = checkbox.isChecked;
-                    break;
-                case "Отображение сетки":
-                    _modInstance.DisplayGrid = checkbox.isChecked;
-                    break;
-                case "Выбор NPC":
-                    //_modInstance.SwitchTargetNPC = checkbox.isChecked;
-                    ToggleTargetNPC(checkbox, ref _modInstance.SwitchTargetNPC);
-                    break;
-                case "Отображение всех локаций":
-                    //_modInstance.SwitchTargetLocations = checkbox.isChecked;
-                    ToggleTargetLocations(checkbox, ref _modInstance.SwitchTargetLocations);
-                    break;
-                case "Отображение всех маршрутов":
-                    //_modInstance.SwitchGlobalNpcPath = checkbox.isChecked;
-                    ToggleLoacationChange(checkbox, ref _modInstance.SwitchGlobalNpcPath);
-                    break;
-                
-            }
-        }
-
-        /// <summary>
-        ///  Обрабатывает действие при наведении курсора. 
-        /// </summary>
-        /// <param name="x">Координата X курсора.</param>
-        /// <param name="y">Координата Y курсора.</param>
-        public override void performHoverAction(int x, int y)
-        {
-            base.performHoverAction(x, y);         
-        }
-
-        /// <summary>
-        /// Обрабатывает клик по кнопкам-стрелкам для смены NPC.
-        /// </summary>
-        /// <param name="x">Координата X клика.</param>
-        /// <param name="y">Координата Y клика.</param>
-        private void HandleArrowButtonClick(int x, int y)
-        {
-            if (_leftArrowButton.containsPoint(x, y) && _modInstance.SwitchTargetNPC && _modInstance.NpcList.CurrentNpcList.Any())
-            {
-                ChangeNPCSelection(-1);
-            }
-
-            if (_rightArrowButton.containsPoint(x, y) && _modInstance.SwitchTargetNPC && _modInstance.NpcList.CurrentNpcList.Any())
-            {
-                ChangeNPCSelection(1);
-            }
-        }
-
-        /// <summary>
-        /// Изменяет текущий выбранный NPC в зависимости от направления (влево/вправо).
-        /// </summary>
-        /// <param name="direction">Направление изменения: -1 для предыдущего, 1 для следующего NPC.</param>
-        private void ChangeNPCSelection(int direction)
-        {
-            var npcList = _modInstance.NpcList.CurrentNpcList;
-            _modInstance.NpcSelected = MathHelper.Clamp(_modInstance.NpcSelected + direction, 0, npcList.Count - 1);          
-            _displayText = _modInstance.NpcList.GetNpcFromList();
-            _modInstance.DrawTiles.tileStates.Clear();
-            _modInstance.SwitchGetNpcPath = true;
-
-            _modInstance.NpcList.CurrentNpcName = _displayText;
-        }
-
-        
-        /// <summary>
-        /// Обрабатывает клики по чекбоксам для изменения состояний.
-        /// </summary>
-        /// <param name="x">Координата X клика.</param>
-        /// <param name="y">Координата Y клика.</param>
-        private void HandleCheckBoxClick(int x, int y)
-        {
-            // Включение мода
-            if (SwitchEnableDisplayCheckbox.containsPoint(x, y))
-            {
-                ToggleCheckBox(SwitchEnableDisplayCheckbox, ref _modInstance.EnableDisplay);
-            }
-            // отображение сетки
-            if (SwitchEnableDisplayCheckbox.isChecked && SwitchDisplayGridCheckbox.containsPoint(x, y))
-            {
-                ToggleCheckBox(SwitchDisplayGridCheckbox, ref _modInstance.DisplayGrid);
-            }
-            // смена локации
-            if (SwitchEnableDisplayCheckbox.isChecked && SwitchTargetLocationsCheckbox.containsPoint(x, y))
-            {
-                ToggleTargetLocations(SwitchTargetLocationsCheckbox, ref _modInstance.SwitchTargetLocations);
-            }
-            // выбор нпс
-            if (SwitchEnableDisplayCheckbox.isChecked && SwitchTargetNPCCheckbox.containsPoint(x, y))
-            {
-                ToggleTargetNPC(SwitchTargetNPCCheckbox, ref _modInstance.SwitchTargetNPC);
-            }
-            // Отображение всех маршрутов
-            if (SwitchEnableDisplayCheckbox.isChecked && SwitchGlobalPathCheckbox.containsPoint(x, y))
-            {
-                ToggleLoacationChange(SwitchGlobalPathCheckbox, ref _modInstance.SwitchGlobalNpcPath);
-            }
-        }
-
-        /// <summary>
-        /// Переключает состояния CheckBox.
-        /// </summary>
-        private void ToggleCheckBox(ClickableCheckbox checkbox, ref bool state)
-        {
-            state = !state;
-            checkbox.isChecked = state;
-        }
-
-        /// <summary>
-        /// Переключает состояние отображения всех локаций и обновляет данные NPC.
-        /// </summary>
-        /// <param name="checkbox">Чекбокс для переключения состояния.</param>
-        /// <param name="state">Состояние отображения (включено/выключено).</param>
-        private void ToggleTargetLocations(ClickableCheckbox checkbox, ref bool state)
-        {
-
-            state = !state;
-            checkbox.isChecked = state;
-
-            // Очищаем информацию о путях NPC
-            _modInstance.DrawTiles.tileStates.Clear();           
-            _modInstance.SwitchGetNpcPath = true;
-            _modInstance.NpcList.CurrentNpcList.Clear();
-            _modInstance.SwitchListFull = false;
-            if (state)
-            {
-                _modInstance.Monitor.Log($"{_modInstance.NpcList.CurrentNpcName} {_modInstance.NpcSelected}", LogLevel.Debug);
-                if (_modInstance.NpcList.CurrentNpcName != null) _modInstance.NpcSelected = _modInstance.NpcList.CurrentNpcList.IndexOf(_modInstance.NpcList.CurrentNpcName);
-                else
-                {
-                    // Если включено отображение всех локаций, сбрасываем выбранного NPC
-                    //SelectFirstIdNpc();
-                }
-
-            }
-            else
-            {
-                // Если отображаются только текущие локации, обновляем список NPC и проверяем текущий выбор
-                //_modInstance.Insce.NpcList.RefreshNpcListForCurrentLocation();
-                EnsureValidNpcSelection();
-            }
-        }
-        
-        
-
-        /// <summary>
-        /// Проверяет корректность текущего выбора NPC и сбрасывает выбор, если он некорректен.
-        /// </summary>
-        private void EnsureValidNpcSelection()
-        {
-            if (!_modInstance.NpcList.CurrentNpcList.Any() ||
-                _modInstance.NpcSelected >= _modInstance.NpcList.CurrentNpcList.Count)
-            {
-                SelectFirstIdNpc();
-            }
-        }
-        
-        /// <summary>
-        /// Переключает состояние выбора NPC.
-        /// </summary>
-        private void ToggleTargetNPC(ClickableCheckbox checkbox, ref bool state)
-        {
-            state = !state;
-            checkbox.isChecked = state;
-
-            _modInstance.DrawTiles.tileStates.Clear();
-            _modInstance.NpcList.CurrentNpcList.Clear();
-            _modInstance.SwitchGetNpcPath = true;
-            _modInstance.SwitchListFull = false;
-            if (state)
-            {
-                SelectFirstIdNpc();
-            }
-            else
-            {
-                _modInstance.NpcList.CurrentNpcName = null;
-            }
-        }
-        private void SelectFirstIdNpc()
-        {
-            _modInstance.NpcSelected = 0;
-        }      
-
-        private void ToggleLoacationChange(ClickableCheckbox checkbox, ref bool state)
-        {
-            state = !state;
-            checkbox.isChecked = state;
-
-            _modInstance.DrawTiles.tileStates.Clear();
-            _modInstance.SwitchGetNpcPath = true;
-        }
-
-        public class ClickableCheckbox : ClickableComponent
-        {
-            public bool isChecked;
-
-            public ClickableCheckbox(Rectangle bounds, string label, bool isChecked)
-                : base(bounds, label)
-            {
-                this.label = label;
-                this.isChecked = isChecked;
-            }
-
-            public void draw(SpriteBatch b, string BoxName)
-            {
-                var texture = Game1.mouseCursors_1_6;
-                var sourceRect = isChecked ? new Rectangle(291, 253, 9, 9) : new Rectangle(273, 253, 9, 9);
-
-                if (_modInstance.Instance.EnableDisplay || BoxName == "Включение")
-                {
-                    b.Draw(texture, new Vector2(bounds.X, bounds.Y), sourceRect, Color.White, 0f, Vector2.Zero, 5f, SpriteEffects.None, 0.4f);
-                    
-                }
-                else if (BoxName != "Включение")
-                {
-                    b.Draw(Game1.mouseCursors, new Vector2(bounds.X, bounds.Y), 
-                        new Rectangle(192, 256, 64, 64), Color.White, 0f, Vector2.Zero, 0.75f, SpriteEffects.None, 0.4f);
-                }
-
-                drawText(b);
-            }
-            public void drawText(SpriteBatch b)
-            {
-                Vector2 textPosition = new Vector2(bounds.X + 70, bounds.Y + (bounds.Height / 2) - (Game1.dialogueFont.MeasureString(label).Y / 2));
-                Utility.drawTextWithShadow(b, label, Game1.dialogueFont, textPosition, Game1.textColor);
+                catch { /* Игнорируем ошибки отрисовки */ }
             }
         }
     }

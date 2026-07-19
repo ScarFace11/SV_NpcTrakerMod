@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using StardewModdingAPI;
 using StardewValley;
@@ -21,7 +21,10 @@ namespace NpcTrackerMod
         public ModEntry ModEntry { get; private set; }
         public LocationsList LocationsList { get; private set; }
         public CustomNpcPaths CustomNpcPaths { get; private set; }
-  
+
+        /// <summary> Конфигурация мода (горячие клавиши). </summary>
+        public ModConfig Config { get; private set; }
+
         /// <summary> Флаг включения видимости путей. </summary>
         public bool EnableDisplay;
 
@@ -31,11 +34,11 @@ namespace NpcTrackerMod
         /// <summary> Флаг установки локаций. </summary>
         public bool LocationSet { get; set; } = false;
 
-        /// <summary>Флаг полного списка NPC. </summary>
+        /// <summary> Флаг полного списка NPC. </summary>
         public bool SwitchListFull = false;
 
         /// <summary> Переключает между отслеживанием всех NPC или конкретного NPC. </summary>
-        public bool SwitchTargetNPC  = false;
+        public bool SwitchTargetNPC = false;
 
         /// <summary> Флаг получения пути NPC. </summary>
         public bool SwitchGetNpcPath = true;
@@ -52,21 +55,25 @@ namespace NpcTrackerMod
         /// <summary> Выбранный NPC. </summary>
         public int NpcSelected { get; set; } = 0;
 
-        
-        /// <summary> Словарь для хранения предыдущих позиций NPC. </summary>
-        public Dictionary<NPC, Point> npcPreviousPositions = new Dictionary<NPC, Point>();
+        /// <summary>
+        /// Фильтр по времени дня. -1 = показывать полный дневной маршрут.
+        /// Иначе показываются только отрезки пути до указанного игрового времени (например, 900, 1200).
+        /// </summary>
+        public int TimeFilter { get; set; } = -1;
 
+        /// <summary> Словарь для хранения предыдущих позиций NPC. </summary>
+        public Dictionary<string, Point> npcPreviousPositions = new Dictionary<string, Point>();
 
         public IEnumerable<NPC> npcList;
 
         /// <summary>
         /// Инициализация мода.
         /// </summary>
-        /// <param name="helper">Справочник помощника мода.</param>
         public override void Entry(IModHelper helper)
         {
+            Instance = this;
 
-            Instance = this; // Инициализация экземпляра мода
+            Config = helper.ReadConfig<ModConfig>();
 
             NpcList = new NpcList(Instance);
             ModEntry = new ModEntry(Instance);
@@ -75,19 +82,28 @@ namespace NpcTrackerMod
             LocationsList = new LocationsList(Instance);
             CustomNpcPaths = new CustomNpcPaths(Instance);
 
-            // Подписка на события
             helper.Events.GameLoop.DayStarted += ModEntry.OnDayStarted;
             helper.Events.Input.ButtonPressed += ModEntry.OnButtonPressed;
             helper.Events.Display.RenderedWorld += ModEntry.OnRenderedWorld;
             helper.Events.GameLoop.DayEnding += ModEntry.OnDayEnding;
             helper.Events.GameLoop.UpdateTicked += ModEntry.OnUpdateTicked;
-            
             helper.Events.Player.Warped += ModEntry.OnPlayerWarped;
-            //CustomNpcPaths.LoadAllModSchedules();
-            
+
+            // Загружаем расписания модовых NPC из ContentPatcher JSON-файлов при старте,
+            // чтобы данные были готовы к первому DayStarted.
+            CustomNpcPaths.LoadAllModSchedules();
         }
 
+        /// <summary> Сохраняет конфигурацию в config.json. </summary>
+        public void SaveConfig() => Helper.WriteConfig(Config);
 
+        /// <summary> Форматирует игровое время (например, 930 → "09:30"). </summary>
+        public static string FormatGameTime(int gameTime)
+        {
+            int hours = gameTime / 100;
+            int minutes = gameTime % 100;
+            return $"{hours:D2}:{minutes:D2}";
+        }
 
         /// <summary>
         /// Отрисовывает пути NPC.
@@ -146,46 +162,91 @@ namespace NpcTrackerMod
                 (int)Math.Floor((npc.Position.X + DrawTiles.tileSize / 2) / DrawTiles.tileSize),
                 (int)Math.Floor((npc.Position.Y + DrawTiles.tileSize / 2) / DrawTiles.tileSize)
             );
-            
+
+            string npcName = npc.Name ?? "unknown";
+
             // Обновление предыдущей позиции NPC и восстановление цвета плитки, если NPC переместился
-            if (npcPreviousPositions.TryGetValue(npc, out var prevPos) && prevPos != currentTile)
+            if (npcPreviousPositions.TryGetValue(npcName, out var prevPos) && prevPos != currentTile)
             {
                 DrawTiles.RestoreTileColor(prevPos);
             }
 
             // Обновление позиции NPC в словаре
-            npcPreviousPositions[npc] = currentTile;
+            npcPreviousPositions[npcName] = currentTile;
 
             // Отрисовка плитки для движения NPC
             DrawTiles.DrawTileForNpcMovement(currentTile, Color.Blue, 1);
+            DrawTiles.RegisterTileOwner(currentTile, npcName, "Сейчас здесь");
         }
 
         /// <summary>
-        /// Отрисовывает маршрут NPC.
+        /// Отрисовывает маршрут NPC (зелёные тайлы).
+        /// Поддерживает фильтр по времени: если TimeFilter >= 0, показывает только
+        /// отрезки пути с временем расписания ≤ TimeFilter.
         /// </summary>
-        /// <param name="npc">NPC для отрисовки маршрута.</param>
         private void DrawNpcRoute(NPC npc)
         {
-            // Проверка на наличие расписания
-            if (!SwitchGetNpcPath) return;
-
-            var pathData = SwitchGlobalNpcPath
-                ? NpcList.GlobalNpcPaths.TryGetValue(npc.Name, out var globalPath) ? globalPath : null
-                : NpcList.NpcTotalToDayPath.TryGetValue(npc.Name, out var dailyPath) ? dailyPath : null;
-
-            if (pathData == null)
+            try
             {
-                Monitor.Log($"NPC {npc.Name} не имеет действительных данных о пути.", LogLevel.Warn);
-                return;
-            }
+                if (!SwitchGetNpcPath || npc == null) return;
 
-            string targetLocation = SwitchTargetLocations ? Game1.player.currentLocation.Name : npc.currentLocation.Name;
-            foreach (var globalPoints in pathData.Where(np => np.Item1 == targetLocation))
-            {
-                foreach (var coord in globalPoints.Item2)
+                List<(string, List<Microsoft.Xna.Framework.Point>)> pathData = null;
+                string timeLabel = null;
+
+                if (SwitchGlobalNpcPath)
                 {
-                    DrawTiles.DrawTileWithPriority(coord, Color.Green, 2);
+                    if (!NpcList.GlobalNpcPaths.TryGetValue(npc.Name, out var globalPath) || globalPath == null)
+                    {
+                        Monitor.Log($"NPC {npc.Name} не имеет глобального пути.", LogLevel.Warn);
+                        return;
+                    }
+                    pathData = globalPath;
                 }
+                else if (TimeFilter >= 0 &&
+                         NpcList.NpcTimedDayPath.TryGetValue(npc.Name, out var timedPath) &&
+                         timedPath.Any())
+                {
+                    // Собираем только отрезки с временем ≤ TimeFilter
+                    pathData = new List<(string, List<Point>)>();
+                    int lastTime = -1;
+                    foreach (var kvp in timedPath.Where(t => t.Key <= TimeFilter))
+                    {
+                        pathData.AddRange(kvp.Value);
+                        lastTime = kvp.Key;
+                    }
+                    if (!pathData.Any()) return;
+                    timeLabel = $"До {FormatGameTime(lastTime)}";
+                }
+                else
+                {
+                    if (!NpcList.NpcTotalToDayPath.TryGetValue(npc.Name, out pathData) || pathData == null)
+                    {
+                        NpcList.GlobalNpcPaths.TryGetValue(npc.Name, out pathData);
+                    }
+
+                }
+
+                if (pathData == null)
+                {
+                    Monitor.Log($"NPC {npc.Name} не имеет действительных данных о пути.", LogLevel.Warn);
+                    return;
+                }
+                string targetLocation = SwitchTargetLocations
+                    ? Game1.player.currentLocation.Name
+                    : npc.currentLocation.Name;
+
+                foreach (var segment in pathData.Where(np => np.Item1 == targetLocation))
+                {
+                    foreach (var coord in segment.Item2)
+                    {
+                        DrawTiles.DrawTileWithPriority(coord, Color.Green, 2);
+                        DrawTiles.RegisterTileOwner(coord, npc.Name, timeLabel ?? "Маршрут");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Monitor.Log($"Ошибка при отрисовке пути NPC {npc?.Name}: {ex.Message}", LogLevel.Error);
             }
         }
     }

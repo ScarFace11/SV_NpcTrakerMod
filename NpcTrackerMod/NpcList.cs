@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using StardewModdingAPI;
@@ -13,7 +13,7 @@ namespace NpcTrackerMod
     public class NpcList
     {
         private readonly _modInstance _modInstance;
-       
+
         /// <summary>
         /// Черный список NPC.
         /// </summary>
@@ -49,16 +49,23 @@ namespace NpcTrackerMod
         /// </summary>
         public Dictionary<string, List<(string, List<Point>)>> GlobalNpcPaths { get; private set; } = new Dictionary<string, List<(string, List<Point>)>>();
 
+        /// <summary>
+        /// Маршруты NPC на текущий день, разбитые по временным слотам расписания.
+        /// Внешний ключ — имя NPC, внутренний — игровое время (напр. 900, 1200).
+        /// Используется для фильтрации маршрута по времени (фича "Фильтр по времени").
+        /// </summary>
+        public Dictionary<string, Dictionary<int, List<(string, List<Point>)>>> NpcTimedDayPath { get; } =
+            new Dictionary<string, Dictionary<int, List<(string, List<Point>)>>>();
+
         private bool _isGlobalListInitialized;
-        
+
         /// <summary>
         /// Конструктор класса NpcList.
         /// </summary>
         /// <param name="instance">Экземпляр основного мода.</param
         public NpcList(_modInstance instance)
         {
-            _modInstance = instance;           
-
+            _modInstance = instance;
             CurrentNpcName = null;
         }
 
@@ -70,32 +77,10 @@ namespace NpcTrackerMod
         /// <param name="Global">Флаг, указывающий, является ли путь глобальным.</param>
         public void AddNpcPath(NPC npc, Dictionary<string, List<(string, List<Point>)>> pathDictionary, List<(string, List<Point>)> Route)
         {
-            if (npc?.Name == null || npc.Schedule == null || !npc.Schedule.Any()) return;
-
-            //Нормально будет использовать для выборки по 1 маршруту из полного текущего списка 
-            /*
-            if (!NpcTotalPath.TryGetValue(npc.Name, out var paths))
-            {
-                paths = new List<(string, List<Point>)>();
-                NpcTotalPath[npc.Name] = paths;
-                modInstance.Monitor.Log($"Добавлен NPC: {npc.Name}", LogLevel.Trace);
-            }
-
-            foreach (var (location, points) in Route)
-            {
-                var existingLocation = paths.FirstOrDefault(p => p.Item1 == location);
-                if (existingLocation.Item1 == null)
-                {
-                    paths.Add((location, new HashSet<Point>(points).ToList()));
-                    modInstance.Monitor.Log($"Добавлена новая локация {location} для NPC {npc.Name}", LogLevel.Trace);
-                }
-                else
-                {
-                    existingLocation.Item2 = new HashSet<Point>(existingLocation.Item2.Concat(points)).ToList();
-                    modInstance.Monitor.Log($"Обновлены координаты в локации {location} для NPC {npc.Name}", LogLevel.Trace);
-                }
-            }
-            */
+            // Проверяем только имя — маршрут уже вычислен и проверен до вызова этого метода.
+            // Нельзя проверять npc.Schedule: у модовых NPC расписание может быть null/пустым,
+            // даже если их маршрут был построен через CustomNpcPaths.
+            if (npc?.Name == null) return;
 
             //Проверка наличия данных для NPC
             if (!pathDictionary.ContainsKey(npc.Name))
@@ -143,14 +128,15 @@ namespace NpcTrackerMod
         public void RefreshCurrentNpcList()
         {
             var previousNpcName = CurrentNpcName;
-            var currentLocationName = Game1.player.currentLocation.Name;
 
             CurrentNpcList = TotalNpcList
                 .Where(npcName => Game1.currentLocation.characters.Any(npc => npc.Name == npcName))
                 .OrderBy(name => name)
                 .ToList();
 
-            CurrentNpcName = CurrentNpcList.Contains(previousNpcName) ? previousNpcName : CurrentNpcList.FirstOrDefault();
+            CurrentNpcName = CurrentNpcList.Contains(previousNpcName)
+                ? previousNpcName
+                : CurrentNpcList.FirstOrDefault();
         }
 
         /// <summary>
@@ -192,37 +178,28 @@ namespace NpcTrackerMod
                 {
                     CurrentNpcList.Add(npc.Name);
                 }
-            }   
-                      
+            }
         }
 
         /// <summary>
         /// Создает и обновляет списки NPC и черного списка.
         /// </summary>
+        /// <summary>
+        /// Создает и обновляет списки NPC и черного списка.
+        /// </summary>
         public void CreateTotalAndBlackList()
         {
-
             // Получение всех NPC во всех локациях
-            GameNpcs =  Game1.locations
+            GameNpcs = Game1.locations
                 .Where(location => location?.characters != null)
                 .SelectMany(location => location.characters)
                 .Where(npc => npc != null) // Отфильтровываем возможные null значения
                 .ToList(); // Преобразуем в список
 
-            //if (!FullGlobalList)
-            //    modInstance.CustomNpcPaths.TransferPath();
-
-            //foreach (var x in NpcTotalGlobalPath)
-            //{
-            //    if (x.Key == "Andy")
-            //    {
-            //        modInstance.Monitor.Log($"NPC: {x.Key}", LogLevel.Debug);
-            //        foreach (var y in x.Value)
-            //        {
-            //            modInstance.Monitor.Log($"Location: {y.Item1}", LogLevel.Debug);
-            //        }
-            //    }
-            //}
+            // Передаём кастомные пути модовых NPC, загруженные из JSON-файлов ContentPatcher,
+            // в ProcessNpcGlobalRoute только один раз (при инициализации глобального списка).
+            if (!_isGlobalListInitialized)
+                _modInstance.CustomNpcPaths.TransferPath();
 
             foreach (var npc in GameNpcs)
             {
@@ -248,7 +225,6 @@ namespace NpcTrackerMod
         public string GetNpcFromList()
         {
             return NpcTotalToDayPath.FirstOrDefault(k => k.Key == CurrentNpcList[_modInstance.NpcSelected]).Key;
-        } 
-
+        }
     }
 }
