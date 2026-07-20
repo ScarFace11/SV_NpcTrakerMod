@@ -17,4 +17,6 @@ Documentation/
 .replit.md
 replit.nix
 zipFile.zip
+attached_assets/
+.agents/
 
