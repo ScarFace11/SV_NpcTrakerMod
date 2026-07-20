@@ -1,179 +1,218 @@
 using System;
 using System.Linq;
-using StardewModdingAPI.Events;
+using System.Text;
+using Microsoft.Xna.Framework;
+using NpcTrackerMod.Core;
+using NpcTrackerMod.Rendering;
+using NpcTrackerMod.Scheduling;
+using NpcTrackerMod.Tracking;
+using NpcTrackerMod.UI;
 using StardewModdingAPI;
+using StardewModdingAPI.Events;
 using StardewValley;
 using StardewValley.Menus;
-using Microsoft.Xna.Framework;
-using System.Collections.Generic;
 
 namespace NpcTrackerMod
 {
-    public class ModEntry
+    /// <summary>
+    /// Точка входа мода. Создаёт все сервисы, подписывается на события SMAPI.
+    /// Не хранит публичного состояния — всё через ModState.
+    /// </summary>
+    public class ModEntry : Mod
     {
-        private readonly _modInstance modInstance;
-        private bool DayStarted = false;
+        // ── Сервисы (создаются в Entry) ───────────────────────────────────────────
+        private ModState            _state;
+        private NpcPathStore        _pathStore;
+        private LocationMapper      _locationMapper;
+        private NpcRegistry         _registry;
+        private ScheduleProcessor   _scheduleProcessor;
+        private CustomScheduleLoader _scheduleLoader;
+        private TileRenderer        _tileRenderer;
+        private RouteRenderer       _routeRenderer;
+        private NpcTracker          _tracker;
+        private ModConfig           _config;
 
-        /// <summary> Предыдущая локация игрока. </summary>
-        private string previousLocationName;
+        // ── Служебное состояние ───────────────────────────────────────────────────
+        private bool _globalRoutesBuilt;
+        private bool _dayActive;
+        private string _previousLocationName;
 
-        public ModEntry(_modInstance instance)
+        // ── Entry ─────────────────────────────────────────────────────────────────
+
+        public override void Entry(IModHelper helper)
         {
-            modInstance = instance;
+            _config = helper.ReadConfig<ModConfig>();
+
+            // Core
+            _state     = new ModState();
+            _pathStore = new NpcPathStore(Monitor);
+
+            // Scheduling
+            _locationMapper    = new LocationMapper(Monitor);
+            _registry          = new NpcRegistry(Monitor, _pathStore);
+            _scheduleProcessor = new ScheduleProcessor(Monitor, _pathStore, _registry, _locationMapper);
+            _scheduleLoader    = new CustomScheduleLoader(Monitor, helper, _scheduleProcessor, _registry);
+
+            // Rendering
+            _tileRenderer  = new TileRenderer(Game1.graphics.GraphicsDevice);
+            _routeRenderer = new RouteRenderer(Monitor, _state, _pathStore, _tileRenderer);
+
+            // Tracking
+            _tracker = new NpcTracker(_state, _registry, _scheduleProcessor, _routeRenderer, _tileRenderer);
+
+            // Подписки на события
+            helper.Events.GameLoop.DayStarted  += OnDayStarted;
+            helper.Events.GameLoop.DayEnding   += OnDayEnding;
+            helper.Events.GameLoop.UpdateTicked += OnUpdateTicked;
+            helper.Events.Input.ButtonPressed  += OnButtonPressed;
+            helper.Events.Display.RenderedWorld += OnRenderedWorld;
+            helper.Events.Player.Warped        += OnPlayerWarped;
+
+            // Загружаем JSON-расписания модов заранее, чтобы они были готовы к DayStarted
+            _scheduleLoader.LoadAll();
         }
 
-        /// <summary>
-        /// Обрабатывает нажатие кнопок.
-        /// Клавиши читаются из config.json и могут быть изменены пользователем.
-        /// </summary>
-        public void OnButtonPressed(object sender, ButtonPressedEventArgs e)
+        // ── SMAPI Events ──────────────────────────────────────────────────────────
+
+        private void OnDayStarted(object sender, DayStartedEventArgs e)
+        {
+            if (!Context.IsWorldReady) return;
+
+            ClearDay();
+            _dayActive = true;
+
+            if (!_state.LocationSet)
+                _locationMapper.BuildFromGame(ref _state.LocationSet);
+
+            // Собираем GameNpcs из всех локаций
+            _registry.RefreshGameNpcs();
+
+            // Глобальные маршруты строятся только один раз за сессию
+            if (!_globalRoutesBuilt)
+            {
+                _scheduleLoader.TransferToProcessor();
+                foreach (var npc in _registry.GameNpcs)
+                {
+                    try { _scheduleProcessor.BuildGlobalRoute(npc, null, null, null); }
+                    catch (Exception ex)
+                    { Monitor.Log($"Ошибка глобального маршрута {npc.Name}: {ex.Message}", LogLevel.Warn); }
+                }
+                _globalRoutesBuilt = true;
+            }
+
+            // Дневные маршруты строятся каждый день
+            foreach (var npc in _registry.GameNpcs)
+            {
+                try { _scheduleProcessor.BuildDayRoutes(npc); }
+                catch (Exception ex)
+                { Monitor.Log($"Ошибка дневного маршрута {npc.Name}: {ex.Message}", LogLevel.Warn); }
+            }
+        }
+
+        private void OnDayEnding(object sender, DayEndingEventArgs e) => _dayActive = false;
+
+        private void OnButtonPressed(object sender, ButtonPressedEventArgs e)
         {
             if (!Context.IsWorldReady) return;
             if (Game1.activeClickableMenu != null || !Context.IsPlayerFree) return;
 
-            if (e.Button == modInstance.Config.MenuKey)
-                OpenTrackingMenu();
-            else if (e.Button == modInstance.Config.DebugKey)
+            if (e.Button == _config.MenuKey)
+                OpenMenu();
+            else if (e.Button == _config.DebugKey)
                 LogCurrentLocationWarps();
         }
 
-        private void LogCurrentLocationWarps()
+        private void OnRenderedWorld(object sender, RenderedWorldEventArgs e)
         {
-            modInstance.Monitor.Log($"{Game1.currentLocation.Name}", LogLevel.Info);
-            foreach (var warp in Game1.currentLocation.warps)
-                modInstance.Monitor.Log($" warp: | X: {warp.X}\t Y: {warp.Y}\t | {warp.TargetName}", LogLevel.Debug);
-            foreach (var door in Game1.currentLocation.doors.Pairs)
-                modInstance.Monitor.Log($" doors: {door}", LogLevel.Debug);
-        }
-
-        private void OpenTrackingMenu()
-        {
-            Game1.activeClickableMenu = new TrackingMenu(modInstance);
-        }
-
-        /// <summary>
-        /// Обрабатывает событие начала дня.
-        /// </summary>
-        public void OnDayStarted(object sender, DayStartedEventArgs e)
-        {
-            if (!Context.IsWorldReady) return;
-
-            ClearDataForNewDay();
-            DayStarted = true;
-
-            if (!modInstance.LocationSet)
-                modInstance.LocationsList.SetLocations();
-
-            UpdateNpcCount();
-        }
-
-        private void UpdateNpcCount()
-        {
-            modInstance.NpcList.CreateTotalAndBlackList();
-        }
-
-        /// <summary>
-        /// Очищает данные для нового дня.
-        /// </summary>
-        private void ClearDataForNewDay()
-        {
-            modInstance.DrawTiles.ClearTiles();
-            modInstance.DrawTiles.npcTemporaryColors.Clear();
-            modInstance.npcPreviousPositions.Clear();
-            modInstance.SwitchGetNpcPath = false;
-
-            modInstance.NpcList.BlacklistedNpcs.Clear();
-            modInstance.NpcList.TotalNpcList.Clear();
-            modInstance.NpcList.CurrentNpcList.Clear();
-            modInstance.NpcList.NpcTotalToDayPath.Clear();
-            modInstance.NpcList.NpcTimedDayPath.Clear();
-
-            modInstance.NpcCount = 0;
-        }
-
-        public void OnDayEnding(object sender, DayEndingEventArgs e)
-        {
-            DayStarted = false;
-        }
-
-        /// <summary>
-        /// Отрисовывает сетку и маршруты NPC. После отрисовки тайлов
-        /// показывает всплывающую подсказку при наведении на помеченный тайл.
-        /// </summary>
-        public void OnRenderedWorld(object sender, RenderedWorldEventArgs e)
-        {
-            if (!modInstance.EnableDisplay) return;
+            if (!_state.EnableDisplay) return;
 
             try
             {
-                var spriteBatch = e.SpriteBatch;
-                Vector2 cameraOffset = new Vector2(Game1.viewport.X, Game1.viewport.Y);
+                var batch  = e.SpriteBatch;
+                var camera = new Vector2(Game1.viewport.X, Game1.viewport.Y);
 
-                modInstance.DrawNpcPaths(spriteBatch, cameraOffset);
+                _tracker.DrawPaths(batch, camera);
 
-                if (modInstance.DisplayGrid)
-                    modInstance.DrawTiles.DrawGrid(spriteBatch, cameraOffset);
+                if (_state.DisplayGrid)
+                    _tileRenderer.DrawGrid(batch, camera);
 
-                // Tooltip: при наведении на тайл маршрута показываем имя NPC и метку времени
-                int tileX = (int)((Game1.viewport.X + Game1.getMouseX()) / Game1.tileSize);
-                int tileY = (int)((Game1.viewport.Y + Game1.getMouseY()) / Game1.tileSize);
-                var hoveredTile = new Point(tileX, tileY);
+                // Тултип при наведении на тайл маршрута
+                int tx = (int)((Game1.viewport.X + Game1.getMouseX()) / Game1.tileSize);
+                int ty = (int)((Game1.viewport.Y + Game1.getMouseY()) / Game1.tileSize);
+                var hovered = new Point(tx, ty);
 
-                if (modInstance.DrawTiles.tileOwners.TryGetValue(hoveredTile, out var ownerList) && ownerList.Count > 0)
+                if (_tileRenderer.TileOwners.TryGetValue(hovered, out var owners) && owners.Count > 0)
                 {
-                    var lines = new System.Text.StringBuilder();
-                    foreach (var entry in ownerList)
+                    var sb = new StringBuilder();
+                    foreach (var o in owners)
                     {
-                        if (lines.Length > 0) lines.Append('\n');
-                        lines.Append(string.IsNullOrEmpty(entry.timeInfo)
-                            ? entry.npcName
-                            : $"{entry.npcName} ({entry.timeInfo})");
+                        if (sb.Length > 0) sb.Append('\n');
+                        sb.Append(string.IsNullOrEmpty(o.TimeInfo)
+                            ? o.NpcName
+                            : $"{o.NpcName} ({o.TimeInfo})");
                     }
-                    IClickableMenu.drawHoverText(spriteBatch, lines.ToString(), Game1.smallFont);
+                    IClickableMenu.drawHoverText(batch, sb.ToString(), Game1.smallFont);
                 }
             }
             catch (Exception ex)
             {
-                modInstance.Monitor.Log($"Error in {nameof(OnRenderedWorld)}: {ex.Message}\nStack Trace: {ex.StackTrace}", LogLevel.Error);
+                Monitor.Log($"Ошибка в OnRenderedWorld: {ex.Message}\n{ex.StackTrace}", LogLevel.Error);
             }
         }
 
-        /// <summary>
-        /// Проверка игрока на переход между локациями.
-        /// </summary>
-        public void OnPlayerWarped(object sender, WarpedEventArgs e)
+        private void OnPlayerWarped(object sender, WarpedEventArgs e)
         {
-            if (Game1.player.currentLocation.Name != previousLocationName)
-            {
-                modInstance.DrawTiles.ClearTiles();
-                previousLocationName = Game1.player.currentLocation.Name;
-                modInstance.SwitchGetNpcPath = true;
-                modInstance.NpcCount = Game1.player.currentLocation.characters.Count();
-            }
+            if (Game1.player.currentLocation.Name == _previousLocationName) return;
+
+            _tileRenderer.Clear();
+            _previousLocationName     = Game1.player.currentLocation.Name;
+            _state.SwitchGetNpcPath   = true;
+            _state.NpcCount           = Game1.player.currentLocation.characters.Count();
         }
 
-        /// <summary>
-        /// Обрабатывает обновление по тикам.
-        /// </summary>
-        public void OnUpdateTicked(object sender, UpdateTickedEventArgs e)
+        private void OnUpdateTicked(object sender, UpdateTickedEventArgs e)
         {
-            const int tickRate = 60;
-            const int intervalInSeconds = 1;
+            if (!_dayActive || !e.IsMultipleOf(60)) return;
+            if (!_state.EnableDisplay || _state.SwitchGlobalNpcPath || _state.SwitchTargetLocations) return;
 
-            if (DayStarted && e.IsMultipleOf((uint)(tickRate * intervalInSeconds)))
-            {
-                if (modInstance.EnableDisplay &&
-                    !modInstance.SwitchGlobalNpcPath &&
-                    !modInstance.SwitchTargetLocations &&
-                    Game1.player.currentLocation.characters.Count() != modInstance.NpcCount)
-                {
-                    modInstance.DrawTiles.ClearTiles();
-                    modInstance.SwitchGetNpcPath = true;
-                    modInstance.NpcCount = Game1.player.currentLocation.characters.Count();
-                    if (!modInstance.SwitchGlobalNpcPath)
-                        modInstance.NpcList.RefreshCurrentNpcList();
-                }
-            }
+            int npcCount = Game1.player.currentLocation.characters.Count();
+            if (npcCount == _state.NpcCount) return;
+
+            _tileRenderer.Clear();
+            _state.SwitchGetNpcPath = true;
+            _state.NpcCount         = npcCount;
+
+            _registry.RefreshCurrentNpcList();
+        }
+
+        // ── Утилиты ───────────────────────────────────────────────────────────────
+
+        private void OpenMenu()
+        {
+            Game1.activeClickableMenu = new TrackingMenu(
+                Monitor, _state, _registry, _tileRenderer, _config,
+                () => Helper.WriteConfig(_config));
+        }
+
+        private void LogCurrentLocationWarps()
+        {
+            Monitor.Log(Game1.currentLocation.Name, LogLevel.Info);
+            foreach (var w in Game1.currentLocation.warps)
+                Monitor.Log($" warp: X={w.X} Y={w.Y} → {w.TargetName}", LogLevel.Debug);
+            foreach (var d in Game1.currentLocation.doors.Pairs)
+                Monitor.Log($" door: {d}", LogLevel.Debug);
+        }
+
+        private void ClearDay()
+        {
+            _tileRenderer.Clear();
+            _tileRenderer.NpcPositionColors.Clear();
+            _state.NpcPreviousPositions.Clear();
+            _state.SwitchGetNpcPath = false;
+            _state.NpcCount         = 0;
+
+            _registry.ClearDay();
+            _pathStore.ClearDay();
         }
     }
 }
