@@ -1,8 +1,0 @@
-C:\!SSD\programming\Stardew Valley Modding\NpcTrackerMod\NpcTrackerMod\bin\Debug\NpcTrackerMod.dll.config
-C:\!SSD\programming\Stardew Valley Modding\NpcTrackerMod\NpcTrackerMod\bin\Debug\NpcTrackerMod.dll
-C:\!SSD\programming\Stardew Valley Modding\NpcTrackerMod\NpcTrackerMod\bin\Debug\Newtonsoft.Json.dll
-C:\!SSD\programming\Stardew Valley Modding\NpcTrackerMod\NpcTrackerMod\bin\Debug\Newtonsoft.Json.xml
-C:\!SSD\programming\Stardew Valley Modding\NpcTrackerMod\NpcTrackerMod\obj\Debug\NpcTrackerMod.csproj.AssemblyReference.cache
-C:\!SSD\programming\Stardew Valley Modding\NpcTrackerMod\NpcTrackerMod\obj\Debug\NpcTrackerMod.csproj.CoreCompileInputs.cache
-C:\!SSD\programming\Stardew Valley Modding\NpcTrackerMod\NpcTrackerMod\obj\Debug\NpcTrack.BBBD4C2F.Up2Date
-C:\!SSD\programming\Stardew Valley Modding\NpcTrackerMod\NpcTrackerMod\obj\Debug\NpcTrackerMod.dll
