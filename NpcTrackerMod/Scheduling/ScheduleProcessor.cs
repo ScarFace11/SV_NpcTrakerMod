@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Xna.Framework;
@@ -180,6 +180,11 @@ namespace NpcTrackerMod.Scheduling
                     out int x, out int y,
                     out int facingDir, out string endBehavior, out string endMessage);
 
+                // Анимационные локации SpaceCore вида "a1000", "a1200" и т.д. —
+                // NPC не перемещается, просто играет анимацию на месте. Пропускаем.
+                if (IsAnimationLocation(locationName))
+                    continue;
+
                 try
                 {
                     var pathDesc = npc.pathfindToNextScheduleLocation(
@@ -264,6 +269,23 @@ namespace NpcTrackerMod.Scheduling
         }
 
         // ── Вспомогательные ──────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Возвращает true, если имя локации является анимационным ключом SpaceCore
+        /// (формат: буква 'a' + цифры, например a1000, a1200).
+        /// Такие локации не являются картами — NPC просто играет анимацию на месте.
+        /// </summary>
+        private static bool IsAnimationLocation(string locationName)
+        {
+            if (string.IsNullOrEmpty(locationName) || locationName.Length < 2)
+                return false;
+            if (locationName[0] != 'a')
+                return false;
+            for (int i = 1; i < locationName.Length; i++)
+                if (!char.IsDigit(locationName[i]))
+                    return false;
+            return true;
+        }
 
         private NPC FindNpcByName(string name)
             => _registry.GameNpcs?.FirstOrDefault(
