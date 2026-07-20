@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -27,6 +27,10 @@ namespace NpcTrackerMod.Scheduling
             = new Dictionary<string, Dictionary<string, List<string>>>();
 
         private string _currentNpcName;
+        private string _currentModName;
+
+        /// <summary> Имя NPC → название мода-источника (из manifest.json). </summary>
+        public Dictionary<string, string> NpcModNames { get; } = new Dictionary<string, string>();
 
         public CustomScheduleLoader(
             IMonitor monitor,
@@ -56,7 +60,10 @@ namespace NpcTrackerMod.Scheduling
                 {
                     string schedulesFolder = FindSchedulesFolder(modFolder);
                     if (!string.IsNullOrEmpty(schedulesFolder))
+                    {
+                        _currentModName = GetModDisplayName(modFolder);
                         LoadFolder(schedulesFolder);
+                    }
                 }
 
                 _monitor.Log("Все кастомные расписания загружены.", LogLevel.Debug);
@@ -165,6 +172,8 @@ namespace NpcTrackerMod.Scheduling
                 npcSchedule = new Dictionary<string, List<string>>();
                 _rawPaths[_currentNpcName] = npcSchedule;
                 _monitor.Log($"Добавлен кастомный NPC: {_currentNpcName}", LogLevel.Trace);
+                if (!NpcModNames.ContainsKey(_currentNpcName))
+                    NpcModNames[_currentNpcName] = _currentModName ?? "Unknown";
             }
 
             foreach (var entry in entries)
@@ -208,6 +217,23 @@ namespace NpcTrackerMod.Scheduling
         }
 
         // ── Вспомогательные ───────────────────────────────────────────────────────
+
+        private static string GetModDisplayName(string modFolder)
+        {
+            try
+            {
+                string manifestPath = Path.Combine(modFolder, "manifest.json");
+                if (File.Exists(manifestPath))
+                {
+                    var manifest = Newtonsoft.Json.JsonConvert.DeserializeObject<JObject>(
+                        JsonUtils.RemoveComments(File.ReadAllText(manifestPath)));
+                    string name = manifest?["Name"]?.ToString();
+                    if (!string.IsNullOrEmpty(name)) return name;
+                }
+            }
+            catch { /* fallback to folder name */ }
+            return Path.GetFileName(modFolder);
+        }
 
         private static string FindSchedulesFolder(string modRoot)
         {

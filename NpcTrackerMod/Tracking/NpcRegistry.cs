@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Xna.Framework;
 using NpcTrackerMod.Core;
@@ -27,6 +27,9 @@ namespace NpcTrackerMod.Tracking
 
         /// <summary> Имя выбранного NPC (сохраняется при RefreshCurrentNpcList). </summary>
         public string CurrentNpcName { get; set; }
+
+        /// <summary> Источник каждого NPC: "Жители деревни" или название мода. </summary>
+        public Dictionary<string, string> NpcModSource { get; } = new Dictionary<string, string>();
 
         /// <summary> Чёрный список — эти NPC не отслеживаются. </summary>
         public HashSet<string> BlacklistedNpcs { get; } = new HashSet<string>();

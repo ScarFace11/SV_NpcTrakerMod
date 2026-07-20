@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Text;
 using Microsoft.Xna.Framework;
@@ -110,6 +110,8 @@ namespace NpcTrackerMod
                 catch (Exception ex)
                 { Monitor.Log($"Ошибка дневного маршрута {npc.Name}: {ex.Message}", LogLevel.Warn); }
             }
+
+            PopulateModSources();
         }
 
         private void OnDayEnding(object sender, DayEndingEventArgs e) => _dayActive = false;
@@ -189,6 +191,17 @@ namespace NpcTrackerMod
         }
 
         // ── Утилиты ───────────────────────────────────────────────────────────────
+
+        private void PopulateModSources()
+        {
+            _registry.NpcModSource.Clear();
+            foreach (string name in _registry.TotalNpcList)
+            {
+                _registry.NpcModSource[name] = _scheduleLoader.NpcModNames.TryGetValue(name, out string mod)
+                    ? mod
+                    : "Жители деревни";
+            }
+        }
 
         private void OpenMenu()
         {
