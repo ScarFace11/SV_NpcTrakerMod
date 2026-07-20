@@ -1,4 +1,4 @@
-﻿using StardewModdingAPI;
+using StardewModdingAPI;
 using StardewValley;
 using Microsoft.Xna.Framework;
 using System.Collections.Generic;
@@ -38,7 +38,9 @@ namespace NpcTrackerMod
                 else
                 {
                     //LocationsTeleportCord[currentLocation]
-                    modInstance.Monitor.Log($"что-то не так. {currentLocation} {npcPosition}", LogLevel.Warn);
+                    // Координата варпа не найдена — типично для кастомных локаций SVE,
+                    // которые используют нестандартные точки перехода. Логируем в Debug.
+                    modInstance.Monitor.Log($"Варп не найден в LocationsTeleportCord: {currentLocation} {npcPosition}", LogLevel.Debug);
                 }
             }
             

@@ -189,11 +189,9 @@ namespace NpcTrackerMod
             try
             {
                 if (!SwitchGetNpcPath || npc == null) return;
-
-                List<(string, List<Microsoft.Xna.Framework.Point>)> pathData = null;
                 string timeLabel = null;
-
-                if (SwitchGlobalNpcPath)
+                    List<(string, List<Microsoft.Xna.Framework.Point>)> pathData = null;
+                    if (SwitchGlobalNpcPath)
                 {
                     if (!NpcList.GlobalNpcPaths.TryGetValue(npc.Name, out var globalPath) || globalPath == null)
                     {

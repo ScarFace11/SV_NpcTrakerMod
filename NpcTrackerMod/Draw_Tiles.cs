@@ -18,11 +18,11 @@ namespace NpcTrackerMod
         public Dictionary<Point, Color> npcTemporaryColors = new Dictionary<Point, Color>();
 
         /// <summary>
-        /// Владельцы тайлов: тайл → (имя NPC, метка времени).
-        /// Используется для всплывающих подсказок при наведении.
+        /// Владельцы тайлов: тайл → список (имя NPC, метка времени).
+        /// На одном тайле может быть несколько NPC — все показываются в тултипе.
         /// </summary>
-        public Dictionary<Point, (string npcName, string timeInfo)> tileOwners =
-            new Dictionary<Point, (string, string)>();
+        public Dictionary<Point, List<(string npcName, string timeInfo)>> tileOwners =
+            new Dictionary<Point, List<(string, string)>>();
 
         /// <summary> Размер плитки. </summary>
         public readonly int tileSize = Game1.tileSize;
@@ -57,10 +57,23 @@ namespace NpcTrackerMod
 
         /// <summary>
         /// Регистрирует владельца тайла (для всплывающей подсказки при наведении).
+        /// Если этот NPC уже зарегистрирован на данном тайле, дубликат не добавляется.
         /// </summary>
         public void RegisterTileOwner(Point tile, string npcName, string timeInfo = null)
         {
-            tileOwners[tile] = (npcName, timeInfo);
+            if (!tileOwners.TryGetValue(tile, out var list))
+            {
+                list = new List<(string, string)>();
+                tileOwners[tile] = list;
+            }
+
+            // Не добавляем одного и того же NPC дважды на тот же тайл
+            foreach (var entry in list)
+            {
+                if (entry.npcName == npcName) return;
+            }
+
+            list.Add((npcName, timeInfo));
         }
 
         /// <summary>

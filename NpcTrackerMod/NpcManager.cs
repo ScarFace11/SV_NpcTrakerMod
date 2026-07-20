@@ -607,7 +607,9 @@ namespace NpcTrackerMod
 
             if (string.IsNullOrEmpty(LocationName) || ListPoints == null || !ListPoints.Any())
             {
-                modInstance.Monitor.Log($"Invalid input to NpcPathFilter. {LocationName} {ListPoints} {ListPoints.Count()}", LogLevel.Warn);
+                // Пустой стек — ожидаемый результат, когда SpaceCore/игра не смогли найти маршрут.
+                // Логируем на уровне Debug, чтобы не засорять консоль.
+                modInstance.Monitor.Log($"NpcPathFilter: пустой маршрут для локации '{LocationName}' (точек: {ListPoints?.Count ?? 0})", LogLevel.Debug);
                 return new List<(string, List<Point>)>();
             }
             if (LastLocationName == null)
