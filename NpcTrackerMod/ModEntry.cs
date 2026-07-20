@@ -119,12 +119,17 @@ namespace NpcTrackerMod
                 int tileY = (int)((Game1.viewport.Y + Game1.getMouseY()) / Game1.tileSize);
                 var hoveredTile = new Point(tileX, tileY);
 
-                if (modInstance.DrawTiles.tileOwners.TryGetValue(hoveredTile, out var ownerInfo))
+                if (modInstance.DrawTiles.tileOwners.TryGetValue(hoveredTile, out var ownerList) && ownerList.Count > 0)
                 {
-                    string tooltipText = string.IsNullOrEmpty(ownerInfo.timeInfo)
-                        ? ownerInfo.npcName
-                        : $"{ownerInfo.npcName}\n{ownerInfo.timeInfo}";
-                    IClickableMenu.drawHoverText(spriteBatch, tooltipText, Game1.smallFont);
+                    var lines = new System.Text.StringBuilder();
+                    foreach (var entry in ownerList)
+                    {
+                        if (lines.Length > 0) lines.Append('\n');
+                        lines.Append(string.IsNullOrEmpty(entry.timeInfo)
+                            ? entry.npcName
+                            : $"{entry.npcName} ({entry.timeInfo})");
+                    }
+                    IClickableMenu.drawHoverText(spriteBatch, lines.ToString(), Game1.smallFont);
                 }
             }
             catch (Exception ex)
