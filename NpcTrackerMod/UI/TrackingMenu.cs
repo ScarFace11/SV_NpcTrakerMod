@@ -19,24 +19,24 @@ namespace NpcTrackerMod.UI
     public class TrackingMenu : IClickableMenu
     {
         // ── Размеры ──────────────────────────────────────────────────────────────────
-        private const int BOX_W      = 580;   // ширина основного блока
-        private const int BOX_H      = 620;   // высота основного блока
-        private const int TAB_W      = 58;    // ширина боковой вкладки
-        private const int TAB_H      = 110;   // высота одной вкладки
-        private const int TAB_GAP    = 6;     // отступ между вкладками
-        private const int PAD        = 22;    // внутренний отступ контента
-        private const int NPC_ROW_H  = 38;   // высота строки в списке NPC
+        private const int BOX_W = 580;   // ширина основного блока
+        private const int BOX_H = 620;   // высота основного блока
+        private const int TAB_W = 58;    // ширина боковой вкладки
+        private const int TAB_H = 110;   // высота одной вкладки
+        private const int TAB_GAP = 6;     // отступ между вкладками
+        private const int PAD = 22;    // внутренний отступ контента
+        private const int NPC_ROW_H = 38;   // высота строки в списке NPC
         private const int NPC_VISIBLE = 11;   // видимых строк NPC
 
         private static readonly string[] TabLabels = { "Главное", "NPC", "Настройки", "Инфо" };
 
         // ── Зависимости ──────────────────────────────────────────────────────────────
-        private readonly IMonitor    _monitor;
-        private readonly ModState    _state;
+        private readonly IMonitor _monitor;
+        private readonly ModState _state;
         private readonly NpcRegistry _registry;
         private readonly TileRenderer _tiles;
-        private readonly ModConfig   _config;
-        private readonly Action      _saveConfig;
+        private readonly ModConfig _config;
+        private readonly Action _saveConfig;
 
         // ── Состояние вкладок ─────────────────────────────────────────────────────────
         private int _activeTab;
@@ -45,15 +45,15 @@ namespace NpcTrackerMod.UI
         private readonly List<ClickableCheckbox> _mainChecks = new List<ClickableCheckbox>();
 
         // NPC
-        private string       _npcSearch      = string.Empty;
-        private string       _npcModFilter;          // null = все
-        private bool         _searchFocused;
-        private int          _npcScrollOffset;
-        private List<string> _filteredNpcs   = new List<string>();
+        private string _npcSearch = string.Empty;
+        private string _npcModFilter;          // null = все
+        private bool _searchFocused;
+        private int _npcScrollOffset;
+        private List<string> _filteredNpcs = new List<string>();
 
         // Настройки
         private string _rebindTarget;
-        private int    _timeFilterIndex;
+        private int _timeFilterIndex;
 
         private static readonly int[] TimeSteps =
         {
@@ -80,11 +80,11 @@ namespace NpcTrackerMod.UI
             Action saveConfig)
             : base(0, 0, BOX_W, BOX_H)
         {
-            _monitor    = monitor    ?? throw new ArgumentNullException(nameof(monitor));
-            _state      = state      ?? throw new ArgumentNullException(nameof(state));
-            _registry   = registry   ?? throw new ArgumentNullException(nameof(registry));
-            _tiles      = tiles      ?? throw new ArgumentNullException(nameof(tiles));
-            _config     = config     ?? throw new ArgumentNullException(nameof(config));
+            _monitor = monitor ?? throw new ArgumentNullException(nameof(monitor));
+            _state = state ?? throw new ArgumentNullException(nameof(state));
+            _registry = registry ?? throw new ArgumentNullException(nameof(registry));
+            _tiles = tiles ?? throw new ArgumentNullException(nameof(tiles));
+            _config = config ?? throw new ArgumentNullException(nameof(config));
             _saveConfig = saveConfig ?? throw new ArgumentNullException(nameof(saveConfig));
 
             int idx = Array.IndexOf(TimeSteps, _state.TimeFilter);
@@ -96,7 +96,7 @@ namespace NpcTrackerMod.UI
 
         private void InitPosition()
         {
-            xPositionOnScreen = Game1.viewport.Width  / 2 - BOX_W / 2;
+            xPositionOnScreen = Game1.viewport.Width / 2 - BOX_W / 2;
             yPositionOnScreen = Game1.viewport.Height / 2 - BOX_H / 2;
 
             _closeBtn = new ClickableTextureComponent(
@@ -123,7 +123,7 @@ namespace NpcTrackerMod.UI
             AddCheck(ref y, x, "Включить трекер",
                 () => _state.EnableDisplay, v => _state.EnableDisplay = v);
             AddCheck(ref y, x, "Отображение сетки",
-                () => _state.DisplayGrid,   v => _state.DisplayGrid   = v);
+                () => _state.DisplayGrid, v => _state.DisplayGrid = v);
 
             y += 36;  // визуальный разрыв + заголовок «Маршруты»
             y += 28;
@@ -169,7 +169,7 @@ namespace NpcTrackerMod.UI
                     _registry.NpcModSource.TryGetValue(n, out string src) &&
                     src == _npcModFilter);
 
-            _filteredNpcs    = all.OrderBy(n => n).ToList();
+            _filteredNpcs = all.OrderBy(n => n).ToList();
             _npcScrollOffset = Math.Max(0,
                 Math.Min(_npcScrollOffset, Math.Max(0, _filteredNpcs.Count - NPC_VISIBLE)));
         }
@@ -179,20 +179,20 @@ namespace NpcTrackerMod.UI
         private Rectangle NpcSearchRect() =>
             new Rectangle(BX + PAD, BY + 58, BOX_W - PAD * 2, 36);
 
-        private int NpcFilterY  => NpcSearchRect().Bottom + 8;
-        private int NpcListY    => NpcFilterY + 34;   // chip 28px + gap 6px
+        private int NpcFilterY => NpcSearchRect().Bottom + 8;
+        private int NpcListY => NpcFilterY + 34;   // chip 28px + gap 6px
 
         private Rectangle NpcRowRect(int visualIdx, int listW) =>
             new Rectangle(BX + PAD, NpcListY + visualIdx * NPC_ROW_H, listW, NPC_ROW_H - 2);
 
         // ── Позиции Settings-вкладки ─────────────────────────────────────────────────
 
-        private Rectangle MenuKeyBtnRect()  => new Rectangle(BX + BOX_W - 185, BY + 103, 162, 34);
+        private Rectangle MenuKeyBtnRect() => new Rectangle(BX + BOX_W - 185, BY + 103, 162, 34);
         private Rectangle DebugKeyBtnRect() => new Rectangle(BX + BOX_W - 185, BY + 150, 162, 34);
 
         private int TimeRowY => BY + 284;
         private Rectangle TimePrevBtn() => new Rectangle(BX + BOX_W / 2 - 115, TimeRowY, 30, 30);
-        private Rectangle TimeNextBtn() => new Rectangle(BX + BOX_W / 2 + 85,  TimeRowY, 30, 30);
+        private Rectangle TimeNextBtn() => new Rectangle(BX + BOX_W / 2 + 85, TimeRowY, 30, 30);
 
         // ── Позиции вкладок ───────────────────────────────────────────────────────────
 
@@ -221,10 +221,10 @@ namespace NpcTrackerMod.UI
                 // Контент
                 switch (_activeTab)
                 {
-                    case 0: DrawMainTab(b);     break;
-                    case 1: DrawNpcTab(b);      break;
+                    case 0: DrawMainTab(b); break;
+                    case 1: DrawNpcTab(b); break;
                     case 2: DrawSettingsTab(b); break;
-                    case 3: DrawInfoTab(b);     break;
+                    case 3: DrawInfoTab(b); break;
                 }
 
                 _closeBtn.draw(b);
@@ -242,7 +242,7 @@ namespace NpcTrackerMod.UI
         {
             for (int i = 0; i < TabLabels.Length; i++)
             {
-                var  rect   = TabRect(i);
+                var rect = TabRect(i);
                 bool active = i == _activeTab;
 
                 // Фон вкладки (активная — белая, неактивная — приглушённая)
@@ -251,11 +251,11 @@ namespace NpcTrackerMod.UI
                     active ? Color.White : new Color(190, 180, 165), 1f, false);
 
                 // Текст, повёрнутый на 90° по часовой стрелке (Pi/2)
-                var    font   = Game1.smallFont;
-                var    sz     = font.MeasureString(TabLabels[i]);
-                var    origin = new Vector2(sz.X / 2f, sz.Y / 2f);
-                var    pos    = new Vector2(
-                    rect.X + rect.Width  / 2f,
+                var font = Game1.smallFont;
+                var sz = font.MeasureString(TabLabels[i]);
+                var origin = new Vector2(sz.X / 2f, sz.Y / 2f);
+                var pos = new Vector2(
+                    rect.X + rect.Width / 2f,
                     rect.Y + rect.Height / 2f);
 
                 b.DrawString(font, TabLabels[i], pos,
@@ -332,7 +332,7 @@ namespace NpcTrackerMod.UI
         {
             int cx = BX + PAD;
             int cy = NpcFilterY;
-            DrawChip(b, ref cx, cy, "Все",    _npcModFilter == null);
+            DrawChip(b, ref cx, cy, "Все", _npcModFilter == null);
             foreach (string g in ModGroups())
                 DrawChip(b, ref cx, cy, g, _npcModFilter == g);
         }
@@ -340,8 +340,8 @@ namespace NpcTrackerMod.UI
         private void DrawChip(SpriteBatch b, ref int x, int y, string label, bool active)
         {
             var sz = Game1.smallFont.MeasureString(label);
-            int w  = (int)sz.X + 16;
-            var r  = new Rectangle(x, y, w, 28);
+            int w = (int)sz.X + 16;
+            var r = new Rectangle(x, y, w, 28);
 
             drawTextureBox(b, Game1.menuTexture, new Rectangle(0, 256, 60, 60),
                 r.X, r.Y, r.Width, r.Height,
@@ -357,14 +357,14 @@ namespace NpcTrackerMod.UI
         private void DrawNpcList(SpriteBatch b)
         {
             int listW = BOX_W - PAD * 2;
-            int end   = Math.Min(_npcScrollOffset + NPC_VISIBLE, _filteredNpcs.Count);
+            int end = Math.Min(_npcScrollOffset + NPC_VISIBLE, _filteredNpcs.Count);
             var mouse = new Point(Game1.getMouseX(), Game1.getMouseY());
 
             for (int i = _npcScrollOffset; i < end; i++)
             {
-                string npc      = _filteredNpcs[i];
-                bool   selected = npc == _registry.CurrentNpcName && _state.SwitchTargetNPC;
-                var    row      = NpcRowRect(i - _npcScrollOffset, listW);
+                string npc = _filteredNpcs[i];
+                bool selected = npc == _registry.CurrentNpcName && _state.SwitchTargetNPC;
+                var row = NpcRowRect(i - _npcScrollOffset, listW);
 
                 if (selected)
                     b.Draw(Game1.staminaRect, row, new Color(255, 215, 90, 90));
@@ -417,7 +417,7 @@ namespace NpcTrackerMod.UI
 
             // Горячие клавиши
             DrawSectionHeader(b, "Горячие клавиши", x, BY + 62);
-            DrawKeybind(b, x, BY + 100, "Открыть меню",   _config.MenuKey.ToString(),  "menu",  MenuKeyBtnRect());
+            DrawKeybind(b, x, BY + 100, "Открыть меню", _config.MenuKey.ToString(), "menu", MenuKeyBtnRect());
             DrawKeybind(b, x, BY + 147, "Отладка варпов", _config.DebugKey.ToString(), "debug", DebugKeyBtnRect());
 
             DrawDivider(b, BY + 196);
@@ -448,10 +448,10 @@ namespace NpcTrackerMod.UI
                 waiting ? new Color(255, 210, 100) : Color.White, 0.7f, false);
 
             string keyText = waiting ? "[нажмите клавишу...]" : key;
-            var    keySz   = Game1.smallFont.MeasureString(keyText);
+            var keySz = Game1.smallFont.MeasureString(keyText);
             Utility.drawTextWithShadow(b, keyText, Game1.smallFont,
                 new Vector2(
-                    btnRect.X + (btnRect.Width  - keySz.X) / 2f,
+                    btnRect.X + (btnRect.Width - keySz.X) / 2f,
                     btnRect.Y + (btnRect.Height - keySz.Y) / 2f),
                 waiting ? new Color(160, 80, 0) : Game1.textColor);
         }
@@ -476,8 +476,8 @@ namespace NpcTrackerMod.UI
             if (Context.IsWorldReady)
             {
                 string season = Game1.currentSeason ?? "—";
-                DrawKV(b, "Дата",     $"{Capitalize(season)}, день {Game1.dayOfMonth}, год {Game1.year}", x, ref y);
-                DrawKV(b, "Локация",  Game1.currentLocation?.Name ?? "—",  x, ref y);
+                DrawKV(b, "Дата", $"{Capitalize(season)}, день {Game1.dayOfMonth}, год {Game1.year}", x, ref y);
+                DrawKV(b, "Локация", Game1.currentLocation?.Name ?? "—", x, ref y);
             }
             else
             {
@@ -490,8 +490,8 @@ namespace NpcTrackerMod.UI
 
             // Статистика NPC
             DrawSectionHeader(b, "Статистика NPC", x, y); y += 36;
-            DrawKV(b, "Отслеживается",         _registry.TotalNpcList.Count.ToString(),                         x, ref y);
-            DrawKV(b, "В текущей локации",      (Game1.currentLocation?.characters.Count ?? 0).ToString(),       x, ref y);
+            DrawKV(b, "Отслеживается", _registry.TotalNpcList.Count.ToString(), x, ref y);
+            DrawKV(b, "В текущей локации", (Game1.currentLocation?.characters.Count ?? 0).ToString(), x, ref y);
             DrawKV(b, "Выбранный NPC",
                 _state.SwitchTargetNPC && _registry.CurrentNpcName != null
                     ? _registry.CurrentNpcName
@@ -552,7 +552,7 @@ namespace NpcTrackerMod.UI
                     if (!TabRect(i).Contains(x, y)) continue;
                     if (_activeTab != i)
                     {
-                        _activeTab     = i;
+                        _activeTab = i;
                         _searchFocused = false;
                         RebuildTab();
                         if (playSound) Game1.playSound("shwip");
@@ -562,8 +562,8 @@ namespace NpcTrackerMod.UI
 
                 switch (_activeTab)
                 {
-                    case 0: ClickMain(x, y, playSound);     break;
-                    case 1: ClickNpc(x, y, playSound);      break;
+                    case 0: ClickMain(x, y, playSound); break;
+                    case 1: ClickNpc(x, y, playSound); break;
                     case 2: ClickSettings(x, y, playSound); break;
                 }
             }
@@ -625,19 +625,19 @@ namespace NpcTrackerMod.UI
                 if (name == _registry.CurrentNpcName && _state.SwitchTargetNPC)
                 {
                     // Повторный клик — снять выбор
-                    _state.SwitchTargetNPC   = false;
+                    _state.SwitchTargetNPC = false;
                     _registry.CurrentNpcName = null;
                 }
                 else
                 {
-                    _state.SwitchTargetNPC   = true;
+                    _state.SwitchTargetNPC = true;
                     _registry.CurrentNpcName = name;
-                    _state.NpcSelected       = i;
+                    _state.NpcSelected = i;
                 }
                 _tiles.Clear();
                 _registry.CurrentNpcList.Clear();
                 _state.SwitchGetNpcPath = true;
-                _state.SwitchListFull   = false;
+                _state.SwitchListFull = false;
                 if (playSound) Game1.playSound("drumkit6");
                 return;
             }
@@ -668,8 +668,8 @@ namespace NpcTrackerMod.UI
                 if (key != Keys.Escape)
                 {
                     var btn = (StardewModdingAPI.SButton)(int)key;
-                    if (_rebindTarget == "menu")  _config.MenuKey  = btn;
-                    else                          _config.DebugKey = btn;
+                    if (_rebindTarget == "menu") _config.MenuKey = btn;
+                    else _config.DebugKey = btn;
                     _saveConfig();
                 }
                 _rebindTarget = null;
@@ -682,7 +682,8 @@ namespace NpcTrackerMod.UI
                     _searchFocused = false;
                 else if (key == Keys.Back && _npcSearch.Length > 0)
                 {
-                    _npcSearch = _npcSearch[..^1];
+                    // ИСПРАВЛЕНО: заменено _npcSearch[..^1] на _npcSearch.Substring(0, _npcSearch.Length - 1)
+                    _npcSearch = _npcSearch.Substring(0, _npcSearch.Length - 1);
                     RebuildNpcFilter();
                 }
                 return;
@@ -691,12 +692,13 @@ namespace NpcTrackerMod.UI
             base.receiveKeyPress(key);
         }
 
-        public override void receiveTextInput(char inputChar)
+        // ИСПРАВЛЕНО: изменен тип параметра с char на string (как требует базовый класс)
+        public override void receiveTextInput(string text)
         {
             if (!_searchFocused) return;
-            if (inputChar is '\b' or '\r' or '\n') return;
+            if (text == "\b" || text == "\r" || text == "\n") return;
             if (_npcSearch.Length >= 30) return;
-            _npcSearch += inputChar;
+            _npcSearch += text;
             _npcScrollOffset = 0;
             RebuildNpcFilter();
         }
@@ -773,6 +775,6 @@ namespace NpcTrackerMod.UI
         }
 
         private static string Capitalize(string s) =>
-            string.IsNullOrEmpty(s) ? s : char.ToUpper(s[0]) + s[1..];
+            string.IsNullOrEmpty(s) ? s : char.ToUpper(s[0]) + s.Substring(1); // ИСПРАВЛЕНО: s[1..] заменено на s.Substring(1)
     }
 }
