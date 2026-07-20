@@ -8,9 +8,6 @@ obj/
 *.user
 *.suo
 
-# Generated documentation
-Documentation/
-
 # Replit internals
 .cache/
 .replit
