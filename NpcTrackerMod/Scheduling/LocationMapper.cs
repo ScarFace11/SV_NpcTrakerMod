@@ -27,7 +27,7 @@ namespace NpcTrackerMod.Scheduling
         /// Обходит все локации игры и заполняет TeleportCoords варпами и дверями.
         /// Вызывается один раз в начале первого дня.
         /// </summary>
-        public void BuildFromGame(ref bool locationSetFlag)
+        public void BuildFromGame()
         {
             TeleportCoords.Clear();
 
@@ -43,8 +43,6 @@ namespace NpcTrackerMod.Scheduling
 
                 TeleportCoords[location.Name] = list;
             }
-
-            locationSetFlag = true;
         }
 
         /// <summary>
