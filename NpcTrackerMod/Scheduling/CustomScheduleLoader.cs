@@ -38,10 +38,10 @@ namespace NpcTrackerMod.Scheduling
             ScheduleProcessor processor,
             NpcRegistry registry)
         {
-            _monitor   = monitor;
-            _helper    = helper;
+            _monitor = monitor;
+            _helper = helper;
             _processor = processor;
-            _registry  = registry;
+            _registry = registry;
         }
 
         // ── Публичный API ────────────────────────────────────────────────────────

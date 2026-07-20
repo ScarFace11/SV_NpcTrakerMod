@@ -26,9 +26,9 @@ namespace NpcTrackerMod.Rendering
             TileRenderer tiles)
         {
             _monitor = monitor;
-            _state   = state;
-            _store   = store;
-            _tiles   = tiles;
+            _state = state;
+            _store = store;
+            _tiles = tiles;
         }
 
         // ── Публичный API ────────────────────────────────────────────────────────
@@ -131,6 +131,9 @@ namespace NpcTrackerMod.Rendering
 
         /// <summary> Форматирует игровое время: 930 → "09:30". </summary>
         public static string FormatTime(int gameTime)
-            => $"{gameTime / 100:D2}:{gameTime % 100:D2}";
+        {
+            int display = gameTime >= 2400 ? gameTime - 2400 : gameTime;
+            return $"{display / 100:D2}:{display % 100:D2}";
+        }
     }
 }

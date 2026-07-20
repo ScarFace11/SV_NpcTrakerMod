@@ -679,37 +679,62 @@ namespace NpcTrackerMod.UI
             if (_searchFocused)
             {
                 if (key == Keys.Escape || key == Keys.Enter)
+                {
                     _searchFocused = false;
+                }
                 else if (key == Keys.Back && _npcSearch.Length > 0)
                 {
-                    // ИСПРАВЛЕНО: заменено _npcSearch[..^1] на _npcSearch.Substring(0, _npcSearch.Length - 1)
                     _npcSearch = _npcSearch.Substring(0, _npcSearch.Length - 1);
                     RebuildNpcFilter();
                 }
-                return;
+                else if (_npcSearch.Length < 30)
+                {
+                    bool shift = Microsoft.Xna.Framework.Input.Keyboard.GetState().IsKeyDown(Keys.LeftShift)
+                              || Microsoft.Xna.Framework.Input.Keyboard.GetState().IsKeyDown(Keys.RightShift);
+                    char c = KeyToChar(key, shift);
+                    if (c != '\0')
+                    {
+                        _npcSearch += c;
+                        _npcScrollOffset = 0;
+                        RebuildNpcFilter();
+                    }
+                }
+                return; // не передаём базовому классу — он может закрыть меню
             }
 
             base.receiveKeyPress(key);
         }
 
-        // ИСПРАВЛЕНО: изменен тип параметра с char на string (как требует базовый класс)
-        public override void receiveTextInput(string text)
+        private static char KeyToChar(Keys key, bool shift)
         {
-            if (!_searchFocused) return;
-            if (text == "\b" || text == "\r" || text == "\n") return;
-            if (_npcSearch.Length >= 30) return;
-            _npcSearch += text;
-            _npcScrollOffset = 0;
-            RebuildNpcFilter();
+            if (key >= Keys.A && key <= Keys.Z)
+                return shift ? (char)('A' + (key - Keys.A)) : (char)('a' + (key - Keys.A));
+            if (key >= Keys.D0 && key <= Keys.D9)
+                return (char)('0' + (key - Keys.D0));
+            if (key >= Keys.NumPad0 && key <= Keys.NumPad9)
+                return (char)('0' + (key - Keys.NumPad0));
+            if (key == Keys.Space) return ' ';
+            if (key == Keys.OemMinus || key == Keys.Subtract) return '-';
+            if (key == Keys.OemPeriod || key == Keys.Decimal) return '.';
+            return '\0';
         }
 
         public override void receiveScrollWheelAction(int direction)
         {
-            if (_activeTab != 1) return;
-            int delta = direction > 0 ? -1 : 1;
-            _npcScrollOffset = Math.Max(0,
-                Math.Min(_npcScrollOffset + delta,
-                    Math.Max(0, _filteredNpcs.Count - NPC_VISIBLE)));
+            if (_activeTab == 1)
+            {
+                int delta = direction > 0 ? -1 : 1;
+                _npcScrollOffset = Math.Max(0,
+                    Math.Min(_npcScrollOffset + delta,
+                        Math.Max(0, _filteredNpcs.Count - NPC_VISIBLE)));
+                return;
+            }
+
+            if (_activeTab == 2)
+            {
+                ChangeTimeFilter(direction > 0 ? -1 : 1);
+                Game1.playSound("smallSelect");
+            }
         }
 
         public override void gameWindowSizeChanged(Rectangle oldBounds, Rectangle newBounds)
@@ -775,6 +800,6 @@ namespace NpcTrackerMod.UI
         }
 
         private static string Capitalize(string s) =>
-            string.IsNullOrEmpty(s) ? s : char.ToUpper(s[0]) + s.Substring(1); // ИСПРАВЛЕНО: s[1..] заменено на s.Substring(1)
+            string.IsNullOrEmpty(s) ? s : char.ToUpper(s[0]) + s.Substring(1);
     }
 }

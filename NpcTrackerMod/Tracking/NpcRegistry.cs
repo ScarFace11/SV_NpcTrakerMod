@@ -37,7 +37,7 @@ namespace NpcTrackerMod.Tracking
         public NpcRegistry(IMonitor monitor, NpcPathStore store)
         {
             _monitor = monitor;
-            _store   = store;
+            _store = store;
         }
 
         // ── Жизненный цикл ────────────────────────────────────────────────────────

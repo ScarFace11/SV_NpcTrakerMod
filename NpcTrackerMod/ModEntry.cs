@@ -21,16 +21,16 @@ namespace NpcTrackerMod
     public class ModEntry : Mod
     {
         // ── Сервисы (создаются в Entry) ───────────────────────────────────────────
-        private ModState            _state;
-        private NpcPathStore        _pathStore;
-        private LocationMapper      _locationMapper;
-        private NpcRegistry         _registry;
-        private ScheduleProcessor   _scheduleProcessor;
+        private ModState _state;
+        private NpcPathStore _pathStore;
+        private LocationMapper _locationMapper;
+        private NpcRegistry _registry;
+        private ScheduleProcessor _scheduleProcessor;
         private CustomScheduleLoader _scheduleLoader;
-        private TileRenderer        _tileRenderer;
-        private RouteRenderer       _routeRenderer;
-        private NpcTracker          _tracker;
-        private ModConfig           _config;
+        private TileRenderer _tileRenderer;
+        private RouteRenderer _routeRenderer;
+        private NpcTracker _tracker;
+        private ModConfig _config;
 
         // ── Служебное состояние ───────────────────────────────────────────────────
         private bool _globalRoutesBuilt;
@@ -44,29 +44,29 @@ namespace NpcTrackerMod
             _config = helper.ReadConfig<ModConfig>();
 
             // Core
-            _state     = new ModState();
+            _state = new ModState();
             _pathStore = new NpcPathStore(Monitor);
 
             // Scheduling
-            _locationMapper    = new LocationMapper(Monitor);
-            _registry          = new NpcRegistry(Monitor, _pathStore);
+            _locationMapper = new LocationMapper(Monitor);
+            _registry = new NpcRegistry(Monitor, _pathStore);
             _scheduleProcessor = new ScheduleProcessor(Monitor, _pathStore, _registry, _locationMapper);
-            _scheduleLoader    = new CustomScheduleLoader(Monitor, helper, _scheduleProcessor, _registry);
+            _scheduleLoader = new CustomScheduleLoader(Monitor, helper, _scheduleProcessor, _registry);
 
             // Rendering
-            _tileRenderer  = new TileRenderer(Game1.graphics.GraphicsDevice);
+            _tileRenderer = new TileRenderer(Game1.graphics.GraphicsDevice);
             _routeRenderer = new RouteRenderer(Monitor, _state, _pathStore, _tileRenderer);
 
             // Tracking
             _tracker = new NpcTracker(_state, _registry, _scheduleProcessor, _routeRenderer, _tileRenderer);
 
             // Подписки на события
-            helper.Events.GameLoop.DayStarted  += OnDayStarted;
-            helper.Events.GameLoop.DayEnding   += OnDayEnding;
+            helper.Events.GameLoop.DayStarted += OnDayStarted;
+            helper.Events.GameLoop.DayEnding += OnDayEnding;
             helper.Events.GameLoop.UpdateTicked += OnUpdateTicked;
-            helper.Events.Input.ButtonPressed  += OnButtonPressed;
+            helper.Events.Input.ButtonPressed += OnButtonPressed;
             helper.Events.Display.RenderedWorld += OnRenderedWorld;
-            helper.Events.Player.Warped        += OnPlayerWarped;
+            helper.Events.Player.Warped += OnPlayerWarped;
 
             // Загружаем JSON-расписания модов заранее, чтобы они были готовы к DayStarted
             _scheduleLoader.LoadAll();
@@ -133,7 +133,7 @@ namespace NpcTrackerMod
 
             try
             {
-                var batch  = e.SpriteBatch;
+                var batch = e.SpriteBatch;
                 var camera = new Vector2(Game1.viewport.X, Game1.viewport.Y);
 
                 _tracker.DrawPaths(batch, camera);
@@ -170,9 +170,9 @@ namespace NpcTrackerMod
             if (Game1.player.currentLocation.Name == _previousLocationName) return;
 
             _tileRenderer.Clear();
-            _previousLocationName     = Game1.player.currentLocation.Name;
-            _state.SwitchGetNpcPath   = true;
-            _state.NpcCount           = Game1.player.currentLocation.characters.Count();
+            _previousLocationName = Game1.player.currentLocation.Name;
+            _state.SwitchGetNpcPath = true;
+            _state.NpcCount = Game1.player.currentLocation.characters.Count();
         }
 
         private void OnUpdateTicked(object sender, UpdateTickedEventArgs e)
@@ -185,7 +185,7 @@ namespace NpcTrackerMod
 
             _tileRenderer.Clear();
             _state.SwitchGetNpcPath = true;
-            _state.NpcCount         = npcCount;
+            _state.NpcCount = npcCount;
 
             _registry.RefreshCurrentNpcList();
         }
@@ -225,7 +225,7 @@ namespace NpcTrackerMod
             _tileRenderer.NpcPositionColors.Clear();
             _state.NpcPreviousPositions.Clear();
             _state.SwitchGetNpcPath = false;
-            _state.NpcCount         = 0;
+            _state.NpcCount = 0;
 
             _registry.ClearDay();
             _pathStore.ClearDay();
