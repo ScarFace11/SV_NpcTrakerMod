@@ -81,8 +81,10 @@ namespace NpcTrackerMod
             ClearDay();
             _dayActive = true;
 
-            if (!_state.LocationSet)
-                _locationMapper.BuildFromGame(ref _state.LocationSet);
+            var tempSet = _state.LocationSet;
+            if (!_state.LocationSet)               
+                _locationMapper.BuildFromGame(ref tempSet);
+                 _state.LocationSet = tempSet;
 
             // Собираем GameNpcs из всех локаций
             _registry.RefreshGameNpcs();
