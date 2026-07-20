@@ -64,8 +64,6 @@ namespace NpcTrackerMod
         /// <summary> Словарь для хранения предыдущих позиций NPC. </summary>
         public Dictionary<string, Point> npcPreviousPositions = new Dictionary<string, Point>();
 
-        public IEnumerable<NPC> npcList;
-
         /// <summary>
         /// Инициализация мода.
         /// </summary>
@@ -112,22 +110,28 @@ namespace NpcTrackerMod
         /// <param name="cameraOffset">Смещение камеры.</param>
         public void DrawNpcPaths(SpriteBatch spriteBatch, Vector2 cameraOffset)
         {
-            // Получаем текущий список NPC для отслеживания
-            npcList = NpcManager.GetNpcsToTrack(SwitchTargetLocations, NpcList.TotalNpcList);
+            // Получаем текущий список NPC для отслеживания.
+            // ToList() кэширует результат — без него IEnumerable обходил бы Game1.locations дважды:
+            // один раз в Any() и ещё раз в foreach.
+            var cachedNpcList = NpcManager.GetNpcsToTrack(SwitchTargetLocations, NpcList.TotalNpcList).ToList();
 
-            if (!npcList.Any()) return;
+            if (!cachedNpcList.Any()) return;
 
             // Если нужно отслеживать конкретного NPC
             if (SwitchTargetNPC && !SwitchListFull)
             {
-                NpcList.NpcAddCurrentList(npcList);
+                NpcList.NpcAddCurrentList(cachedNpcList);
                 NpcList.CurrentNpcList.Sort();
                 SwitchListFull = true;
             }
 
-            foreach (var npc in npcList.Where(n => n != null && !string.IsNullOrWhiteSpace(n.Name)))
+            // Кэшируем результат GetNpcFromList() один раз — без этого вызов происходил
+            // внутри цикла для каждого NPC каждый кадр.
+            string targetNpcName = SwitchTargetNPC ? NpcList.GetNpcFromList() : null;
+
+            foreach (var npc in cachedNpcList.Where(n => n != null && !string.IsNullOrWhiteSpace(n.Name)))
             {
-                if (!SwitchTargetNPC || npc.Name == NpcList.GetNpcFromList())
+                if (!SwitchTargetNPC || npc.Name == targetNpcName)
                 {
                     NpcCreatePath(npc);
                 }
@@ -189,39 +193,43 @@ namespace NpcTrackerMod
             try
             {
                 if (!SwitchGetNpcPath || npc == null) return;
+
                 string timeLabel = null;
-                    List<(string, List<Microsoft.Xna.Framework.Point>)> pathData = null;
-                    if (SwitchGlobalNpcPath)
+                Dictionary<string, HashSet<Point>> pathData = null;
+
+                if (SwitchGlobalNpcPath)
                 {
-                    if (!NpcList.GlobalNpcPaths.TryGetValue(npc.Name, out var globalPath) || globalPath == null)
+                    if (!NpcList.GlobalNpcPaths.TryGetValue(npc.Name, out pathData) || pathData == null)
                     {
                         Monitor.Log($"NPC {npc.Name} не имеет глобального пути.", LogLevel.Warn);
                         return;
                     }
-                    pathData = globalPath;
                 }
                 else if (TimeFilter >= 0 &&
                          NpcList.NpcTimedDayPath.TryGetValue(npc.Name, out var timedPath) &&
                          timedPath.Any())
                 {
-                    // Собираем только отрезки с временем ≤ TimeFilter
-                    pathData = new List<(string, List<Point>)>();
+                    // Собираем только отрезки с временем ≤ TimeFilter, объединяя тайлы по локациям
+                    pathData = new Dictionary<string, HashSet<Point>>();
                     int lastTime = -1;
                     foreach (var kvp in timedPath.Where(t => t.Key <= TimeFilter))
                     {
-                        pathData.AddRange(kvp.Value);
+                        foreach (var locKvp in kvp.Value)
+                        {
+                            if (!pathData.TryGetValue(locKvp.Key, out var pts))
+                                pathData[locKvp.Key] = new HashSet<Point>(locKvp.Value);
+                            else
+                                pts.UnionWith(locKvp.Value);
+                        }
                         lastTime = kvp.Key;
                     }
-                    if (!pathData.Any()) return;
+                    if (pathData.Count == 0) return;
                     timeLabel = $"До {FormatGameTime(lastTime)}";
                 }
                 else
                 {
                     if (!NpcList.NpcTotalToDayPath.TryGetValue(npc.Name, out pathData) || pathData == null)
-                    {
                         NpcList.GlobalNpcPaths.TryGetValue(npc.Name, out pathData);
-                    }
-
                 }
 
                 if (pathData == null)
@@ -229,13 +237,15 @@ namespace NpcTrackerMod
                     Monitor.Log($"NPC {npc.Name} не имеет действительных данных о пути.", LogLevel.Warn);
                     return;
                 }
+
                 string targetLocation = SwitchTargetLocations
                     ? Game1.player.currentLocation.Name
                     : npc.currentLocation.Name;
 
-                foreach (var segment in pathData.Where(np => np.Item1 == targetLocation))
+                // O(1) поиск по локации вместо Where по всему списку
+                if (pathData.TryGetValue(targetLocation, out var tileSet))
                 {
-                    foreach (var coord in segment.Item2)
+                    foreach (var coord in tileSet)
                     {
                         DrawTiles.DrawTileWithPriority(coord, Color.Green, 2);
                         DrawTiles.RegisterTileOwner(coord, npc.Name, timeLabel ?? "Маршрут");
