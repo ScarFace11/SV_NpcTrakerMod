@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props"
+          Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{964FA95D-520E-4FAD-99EA-839F9258CEF5}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <EnableHarmony>true</EnableHarmony>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>NpcTrackerMod</RootNamespace>
+    <AssemblyName>NpcTrackerMod</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <Deterministic>true</Deterministic>
+    <NuGetPackageImportStamp></NuGetPackageImportStamp>
+    <TargetFrameworkProfile />
+    <LangVersion>9.0</LangVersion>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <UseVSHostingProcess>true</UseVSHostingProcess>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.13.0.4\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.ValueTuple" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Root -->
+    <Compile Include="ModEntry.cs" />
+    <Compile Include="ModConfig.cs" />
+    <Compile Include="ContentPatcher.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+
+    <!-- Core -->
+    <Compile Include="Core\ModState.cs" />
+    <Compile Include="Core\NpcPathStore.cs" />
+
+    <!-- Scheduling -->
+    <Compile Include="Scheduling\JsonUtils.cs" />
+    <Compile Include="Scheduling\ScheduleEntryParser.cs" />
+    <Compile Include="Scheduling\LocationMapper.cs" />
+    <Compile Include="Scheduling\ScheduleProcessor.cs" />
+    <Compile Include="Scheduling\CustomScheduleLoader.cs" />
+
+    <!-- Tracking -->
+    <Compile Include="Tracking\NpcRegistry.cs" />
+    <Compile Include="Tracking\NpcTracker.cs" />
+
+    <!-- Rendering -->
+    <Compile Include="Rendering\TileRenderer.cs" />
+    <Compile Include="Rendering\RouteRenderer.cs" />
+
+    <!-- UI -->
+    <Compile Include="UI\MenuComponents.cs" />
+    <Compile Include="UI\TrackingMenu.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="app.config" />
+    <None Include="manifest.json" />
+    <None Include="packages.config" />
+  </ItemGroup>
+
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>Данный проект ссылается на пакеты NuGet, отсутствующие на этом компьютере. Используйте восстановление пакетов NuGet, чтобы скачать их. Отсутствует следующий файл: {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\packages\Pathoschild.Stardew.ModBuildConfig.4.4.0\build\Pathoschild.Stardew.ModBuildConfig.targets')"
+           Text="$([System.String]::Format('$(ErrorText)', '..\packages\Pathoschild.Stardew.ModBuildConfig.4.4.0\build\Pathoschild.Stardew.ModBuildConfig.targets'))" />
+    <Error Condition="!Exists('..\packages\System.ValueTuple.4.6.2\build\net471\System.ValueTuple.targets')"
+           Text="$([System.String]::Format('$(ErrorText)', '..\packages\System.ValueTuple.4.6.2\build\net471\System.ValueTuple.targets'))" />
+  </Target>
+
+  <Import Project="..\packages\Pathoschild.Stardew.ModBuildConfig.4.4.0\build\Pathoschild.Stardew.ModBuildConfig.targets"
+          Condition="Exists('..\packages\Pathoschild.Stardew.ModBuildConfig.4.4.0\build\Pathoschild.Stardew.ModBuildConfig.targets')" />
+  <Import Project="..\packages\System.ValueTuple.4.6.2\build\net471\System.ValueTuple.targets"
+          Condition="Exists('..\packages\System.ValueTuple.4.6.2\build\net471\System.ValueTuple.targets')" />
+</Project>
