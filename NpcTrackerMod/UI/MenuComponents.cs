@@ -27,9 +27,9 @@ namespace NpcTrackerMod.UI
     internal class UIComponent
     {
         protected ClickableTextureComponent Texture { get; }
-        public Action OnClick { get; set; }
+        public Action? OnClick { get; set; }
 
-        public UIComponent(ClickableTextureComponent texture, Action onClick = null)
+        public UIComponent(ClickableTextureComponent texture, Action? onClick = null)
         {
             Texture = texture;
             OnClick = onClick;
