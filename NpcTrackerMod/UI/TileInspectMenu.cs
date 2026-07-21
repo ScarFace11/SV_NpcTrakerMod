@@ -138,7 +138,8 @@ namespace NpcTrackerMod.UI
                     Source          = source ?? "—",
                     CurrentLocation = npc?.currentLocation?.Name ?? "—",
                     Schedule        = schedule,
-                    NextDestination = nextDest
+                    NextDestination = nextDest,
+                    Portrait        = npc?.Portrait
                 });
             }
 
@@ -235,6 +236,17 @@ namespace NpcTrackerMod.UI
 
             int cx = cardRect.X + 10;
             int cy = cardTop   + 8;
+
+            // ── Аватарка NPC (слева от имени, высота = высота шрифта) ──
+            int avatarSize = (int)Game1.dialogueFont.MeasureString("A").Y;
+            if (data.Portrait != null)
+            {
+                b.Draw(data.Portrait,
+                    new Rectangle(cx, cy, avatarSize, avatarSize),
+                    new Rectangle(0, 0, 64, 64),
+                    Color.White);
+                cx += avatarSize + 6;
+            }
 
             // ── Имя NPC ──
             Color nameCol = selected ? new Color(140, 78, 0) : Game1.textColor;
@@ -410,6 +422,7 @@ namespace NpcTrackerMod.UI
             public string CurrentLocation;
             public List<(string Time, string Location)> Schedule;
             public string NextDestination;
+            public Texture2D Portrait;
         }
     }
 }

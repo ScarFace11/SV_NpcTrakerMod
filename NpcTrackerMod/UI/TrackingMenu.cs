@@ -397,8 +397,23 @@ namespace NpcTrackerMod.UI
                     b.Draw(Game1.staminaRect, row, new Color(200, 195, 180, 55));
 
                 float textY = row.Y + (row.Height - Game1.dialogueFont.MeasureString("A").Y) / 2f;
+
+                // ── Аватарка NPC (слева от имени, вписана в высоту строки) ──
+                int textX = row.X + 10;
+                var gameNpc = _registry.GameNpcs?.FirstOrDefault(n => n?.Name == npc);
+                if (gameNpc?.Portrait != null)
+                {
+                    int ava = Math.Min((int)Game1.dialogueFont.MeasureString("A").Y, row.Height - 4);
+                    int avaY = row.Y + (row.Height - ava) / 2;
+                    b.Draw(gameNpc.Portrait,
+                        new Rectangle(textX, avaY, ava, ava),
+                        new Rectangle(0, 0, 64, 64),
+                        Color.White);
+                    textX += ava + 6;
+                }
+
                 Utility.drawTextWithShadow(b, npc, Game1.dialogueFont,
-                    new Vector2(row.X + 10, textY),
+                    new Vector2(textX, textY),
                     selected ? new Color(120, 70, 10) : Game1.textColor);
 
                 if (_registry.NpcModSource.TryGetValue(npc, out string src))
