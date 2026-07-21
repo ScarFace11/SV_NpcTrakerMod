@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
 using NpcTrackerMod.Core;
 using NpcTrackerMod.Rendering;
 using NpcTrackerMod.Scheduling;
@@ -68,7 +67,6 @@ namespace NpcTrackerMod
             helper.Events.GameLoop.UpdateTicked += OnUpdateTicked;
             helper.Events.Input.ButtonPressed += OnButtonPressed;
             helper.Events.Display.RenderedWorld += OnRenderedWorld;
-            helper.Events.Display.RenderedHud += OnRenderedHud;
             helper.Events.Player.Warped += OnPlayerWarped;
 
             // Загружаем JSON-расписания модов заранее, чтобы они были готовы к DayStarted
@@ -132,8 +130,8 @@ namespace NpcTrackerMod
             {
                 LogCurrentLocationWarps();
             }
-            // Фича 3: правый клик на тайл маршрута — лок на NPC
-            else if (e.Button == SButton.MouseRight && _state.EnableDisplay)
+            // Фича 3: клик по тайлу маршрута — выбрать/снять NPC
+            else if (e.Button == _config.SelectNpcKey && _state.EnableDisplay)
             {
                 int tx = (int)((Game1.viewport.X + Game1.getMouseX()) / Game1.tileSize);
                 int ty = (int)((Game1.viewport.Y + Game1.getMouseY()) / Game1.tileSize);
@@ -143,24 +141,25 @@ namespace NpcTrackerMod
                 {
                     string clickedName = owners[0].NpcName;
 
-                    if (clickedName == _registry.CurrentNpcName && _state.SwitchTargetNPC)
+                    // Повторный клик по уже выбранному — убрать из выборки
+                    if (_registry.SelectedNpcNames.Contains(clickedName))
                     {
-                        // Повторный клик — снять лок
-                        _state.SwitchTargetNPC = false;
-                        _registry.CurrentNpcName = null;
+                        _registry.SelectedNpcNames.Remove(clickedName);
                     }
                     else
                     {
-                        _state.SwitchTargetNPC = true;
+                        _registry.SelectedNpcNames.Add(clickedName);
                         _registry.CurrentNpcName = clickedName;
                     }
+
+                    // SwitchTargetNPC включён, пока есть хотя бы один выбранный NPC
+                    _state.SwitchTargetNPC = _registry.SelectedNpcNames.Count > 0;
 
                     _tileRenderer.Clear();
                     _registry.CurrentNpcList.Clear();
                     _state.SwitchGetNpcPath = true;
                     _state.SwitchListFull = false;
 
-                    // Подавляем клик — иначе игра откроет диалог с NPC
                     Helper.Input.Suppress(e.Button);
                     Game1.playSound("smallSelect");
                 }
@@ -202,8 +201,8 @@ namespace NpcTrackerMod
                             sb.Append($"\n  {nextHint}");
                     }
 
-                    // Подсказка о правом клике
-                    sb.Append("\n[ПКМ] Выбрать NPC");
+                    // Подсказка: клавиша выбора
+                    sb.Append($"\n[{_config.SelectNpcKey}] Выбрать/снять NPC");
                     IClickableMenu.drawHoverText(batch, sb.ToString(), Game1.smallFont);
                 }
             }
@@ -238,80 +237,9 @@ namespace NpcTrackerMod
             _registry.RefreshCurrentNpcList();
         }
 
-        // ── HUD (Фича 5) ──────────────────────────────────────────────────────────
-
-        private void OnRenderedHud(object sender, RenderedHudEventArgs e)
-        {
-            if (!_state.EnableDisplay || !_state.EnableHud) return;
-            if (!Context.IsWorldReady || _registry.GameNpcs == null) return;
-
-            try { DrawHud(e.SpriteBatch); }
-            catch (Exception ex)
-            { Monitor.Log($"Ошибка HUD: {ex.Message}", LogLevel.Error); }
-        }
-
-        private void DrawHud(SpriteBatch batch)
-        {
-            // Собираем строки: NPC → текущая локация → следующая точка
-            var rows = new System.Collections.Generic.List<(string Name, string Loc, string Next)>();
-
-            IEnumerable<NPC> candidates;
-            if (_state.SwitchTargetNPC && !string.IsNullOrEmpty(_registry.CurrentNpcName))
-            {
-                candidates = _registry.GameNpcs
-                    .Where(n => n?.Name == _registry.CurrentNpcName)
-                    .Take(1);
-            }
-            else
-            {
-                candidates = _registry.GameNpcs
-                    .Where(n => n != null
-                        && _registry.TotalNpcList.Contains(n.Name)
-                        && n.currentLocation?.Name == Game1.currentLocation?.Name)
-                    .Take(6);
-            }
-
-            foreach (var npc in candidates)
-            {
-                string loc  = npc.currentLocation?.Name ?? "?";
-                string next = GetNextScheduleLabel(npc.Name);
-                rows.Add((npc.Name, loc, next));
-            }
-
-            if (rows.Count == 0) return;
-
-            var font  = Game1.smallFont;
-            int lineH = (int)font.MeasureString("A").Y + 2;
-            int pad   = 10;
-            int boxW  = 260;
-            int boxH  = rows.Count * lineH * 2 + pad * 2 + 4;
-            int bx    = 20;
-            int by    = 120;   // ниже стандартных HUD-элементов
-
-            // Фон
-            IClickableMenu.drawTextureBox(batch, Game1.menuTexture,
-                new Rectangle(0, 256, 60, 60),
-                bx, by, boxW, boxH, Color.White * 0.85f, 1f, false);
-
-            int ty = by + pad;
-            foreach (var (name, loc, next) in rows)
-            {
-                Utility.drawTextWithShadow(batch, name, font,
-                    new Vector2(bx + pad, ty), new Color(90, 60, 20));
-                ty += lineH;
-
-                string detail = next != null ? $"{loc}  {next}" : loc;
-                Utility.drawTextWithShadow(batch, detail, font,
-                    new Vector2(bx + pad + 8, ty), Color.Gray);
-                ty += lineH;
-            }
-        }
-
-        // ── Следующая точка расписания (Фича 4) ──────────────────────────────────
-
         /// <summary>
-        /// Возвращает строку вида «→ Saloon в 12:00» — следующая запись расписания после текущего времени.
-        /// Возвращает null, если расписание недоступно или NPC уже провёл последнюю точку дня.
+        /// Возвращает строку вида «→ Saloon в 12:00» — следующая запись расписания NPC
+        /// после текущего игрового времени. Null, если данных нет или день уже закончился.
         /// </summary>
         private string GetNextScheduleLabel(string npcName)
         {
@@ -321,7 +249,7 @@ namespace NpcTrackerMod
                 if (npc?.Schedule == null || npc.Schedule.Count == 0) return null;
 
                 int currentTime = Game1.timeOfDay;
-                int nextTime    = 0;
+                int nextTime = 0;
 
                 foreach (int key in npc.Schedule.Keys.OrderBy(k => k))
                 {

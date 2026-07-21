@@ -46,7 +46,7 @@ namespace NpcTrackerMod.UI
 
         // NPC
         private string _npcSearch = string.Empty;
-        private string _npcModFilter;          // null = все
+        private string _npcModFilter;            // null = все
         private bool _searchFocused;
         private int _npcScrollOffset;
         private List<string> _filteredNpcs = new List<string>();
@@ -124,8 +124,6 @@ namespace NpcTrackerMod.UI
                 () => _state.EnableDisplay, v => _state.EnableDisplay = v);
             AddCheck(ref y, x, "Отображение сетки",
                 () => _state.DisplayGrid, v => _state.DisplayGrid = v);
-            AddCheck(ref y, x, "Мини-HUD в углу экрана",
-                () => _state.EnableHud, v => _state.EnableHud = v);
 
             y += 36;  // визуальный разрыв + заголовок «Маршруты»
             y += 28;
@@ -178,8 +176,11 @@ namespace NpcTrackerMod.UI
 
         // ── Позиции NPC-вкладки (единый источник для draw и click) ──────────────────
 
+        private const int RESET_BTN_W = 130;
         private Rectangle NpcSearchRect() =>
-            new Rectangle(BX + PAD, BY + 58, BOX_W - PAD * 2, 36);
+            new Rectangle(BX + PAD, BY + 58, BOX_W - PAD * 2 - RESET_BTN_W - 8, 36);
+        private Rectangle NpcResetBtnRect() =>
+            new Rectangle(BX + BOX_W - PAD - RESET_BTN_W, BY + 58, RESET_BTN_W, 36);
 
         private int NpcFilterY => NpcSearchRect().Bottom + 8;
         private int NpcListY => NpcFilterY + 34;   // chip 28px + gap 6px
@@ -190,9 +191,10 @@ namespace NpcTrackerMod.UI
         // ── Позиции Settings-вкладки ─────────────────────────────────────────────────
 
         private Rectangle MenuKeyBtnRect() => new Rectangle(BX + BOX_W - 185, BY + 103, 162, 34);
-        private Rectangle DebugKeyBtnRect() => new Rectangle(BX + BOX_W - 185, BY + 150, 162, 34);
+        private Rectangle DebugKeyBtnRect()    => new Rectangle(BX + BOX_W - 185, BY + 150, 162, 34);
+        private Rectangle SelectNpcKeyBtnRect() => new Rectangle(BX + BOX_W - 185, BY + 197, 162, 34);
 
-        private int TimeRowY => BY + 284;
+        private int TimeRowY => BY + 331;
         private Rectangle TimePrevBtn() => new Rectangle(BX + BOX_W / 2 - 115, TimeRowY, 30, 30);
         private Rectangle TimeNextBtn() => new Rectangle(BX + BOX_W / 2 + 85, TimeRowY, 30, 30);
 
@@ -270,7 +272,7 @@ namespace NpcTrackerMod.UI
 
         private void DrawMainTab(SpriteBatch b)
         {
-            if (_mainChecks.Count < 5) return;
+            if (_mainChecks.Count < 4) return;
 
             int x = BX + PAD + 6;
 
@@ -279,17 +281,16 @@ namespace NpcTrackerMod.UI
             DrawGroupHeader(b, "Отображение", x, g1Y);
             _mainChecks[0].Draw(b);
             _mainChecks[1].Draw(b);
-            _mainChecks[2].Draw(b);  // HUD
 
             // Разделитель
-            int divY = _mainChecks[2].Bounds.Bottom + 14;
+            int divY = _mainChecks[1].Bounds.Bottom + 14;
             DrawDivider(b, divY);
 
             // Группа: Маршруты
-            int g2Y = _mainChecks[3].Bounds.Y - 30;
+            int g2Y = _mainChecks[2].Bounds.Y - 30;
             DrawGroupHeader(b, "Маршруты", x, g2Y);
+            _mainChecks[2].Draw(b);
             _mainChecks[3].Draw(b);
-            _mainChecks[4].Draw(b);
         }
 
         // ── NPC ───────────────────────────────────────────────────────────────────────
@@ -301,6 +302,9 @@ namespace NpcTrackerMod.UI
 
             // Фильтры по модам
             DrawModChips(b);
+
+            // Кнопка сброса выбора
+            DrawResetButton(b);
 
             // Разделитель
             DrawDivider(b, NpcListY - 6);
@@ -366,7 +370,7 @@ namespace NpcTrackerMod.UI
             for (int i = _npcScrollOffset; i < end; i++)
             {
                 string npc = _filteredNpcs[i];
-                bool selected = npc == _registry.CurrentNpcName && _state.SwitchTargetNPC;
+                bool selected = _state.SwitchTargetNPC && _registry.SelectedNpcNames.Contains(npc);
                 var row = NpcRowRect(i - _npcScrollOffset, listW);
 
                 if (selected)
@@ -412,6 +416,24 @@ namespace NpcTrackerMod.UI
                 new Color(130, 100, 60, 200));
         }
 
+        private void DrawResetButton(SpriteBatch b)
+        {
+            var rect = NpcResetBtnRect();
+            bool hasSelection = _state.SwitchTargetNPC && _registry.SelectedNpcNames.Count > 0;
+            var bgColor = hasSelection ? new Color(200, 80, 60) : new Color(180, 165, 140, 120);
+            var textColor = hasSelection ? Color.White : new Color(140, 130, 115);
+
+            drawTextureBox(b, Game1.menuTexture, new Rectangle(0, 256, 60, 60),
+                rect.X, rect.Y, rect.Width, rect.Height, bgColor, 0.85f, false);
+
+            string label = "Сбросить выбор";
+            var sz = Game1.smallFont.MeasureString(label);
+            Utility.drawTextWithShadow(b, label, Game1.smallFont,
+                new Vector2(rect.X + (rect.Width - sz.X) / 2f,
+                            rect.Y + (rect.Height - sz.Y) / 2f),
+                textColor);
+        }
+
         // ── Настройки ─────────────────────────────────────────────────────────────────
 
         private void DrawSettingsTab(SpriteBatch b)
@@ -422,11 +444,12 @@ namespace NpcTrackerMod.UI
             DrawSectionHeader(b, "Горячие клавиши", x, BY + 62);
             DrawKeybind(b, x, BY + 100, "Открыть меню", _config.MenuKey.ToString(), "menu", MenuKeyBtnRect());
             DrawKeybind(b, x, BY + 147, "Отладка варпов", _config.DebugKey.ToString(), "debug", DebugKeyBtnRect());
+            DrawKeybind(b, x, BY + 194, "Выбрать NPC", _config.SelectNpcKey.ToString(), "select", SelectNpcKeyBtnRect());
 
-            DrawDivider(b, BY + 196);
+            DrawDivider(b, BY + 248);
 
             // Фильтр по времени
-            DrawSectionHeader(b, "Фильтр по времени", x, BY + 212);
+            DrawSectionHeader(b, "Фильтр по времени", x, BY + 264);
 
             // Кнопки ◄ ►
             DrawArrow(b, TimePrevBtn(), left: true);
@@ -495,11 +518,19 @@ namespace NpcTrackerMod.UI
             DrawSectionHeader(b, "Статистика NPC", x, y); y += 36;
             DrawKV(b, "Отслеживается", _registry.TotalNpcList.Count.ToString(), x, ref y);
             DrawKV(b, "В текущей локации", (Game1.currentLocation?.characters.Count ?? 0).ToString(), x, ref y);
-            DrawKV(b, "Выбранный NPC",
-                _state.SwitchTargetNPC && _registry.CurrentNpcName != null
-                    ? _registry.CurrentNpcName
-                    : "не выбран",
+            DrawKV(b, "Выбрано NPC",
+                _state.SwitchTargetNPC && _registry.SelectedNpcNames.Count > 0
+                    ? _registry.SelectedNpcNames.Count.ToString()
+                    : "не выбраны",
                 x, ref y);
+            if (_state.SwitchTargetNPC && _registry.SelectedNpcNames.Count > 0)
+            {
+                foreach (var sn in _registry.SelectedNpcNames.OrderBy(n => n))
+                {
+                    DrawKV(b, "  •", sn, x, ref y);
+                    if (y > BY + BOX_H - 60) break;
+                }
+            }
 
             DrawDivider(b, y + 6); y += 26;
 
@@ -617,6 +648,20 @@ namespace NpcTrackerMod.UI
                 return;
             }
 
+            // Кнопка сброса выбора
+            if (NpcResetBtnRect().Contains(x, y))
+            {
+                _registry.SelectedNpcNames.Clear();
+                _registry.CurrentNpcName = null;
+                _state.SwitchTargetNPC = false;
+                _tiles.Clear();
+                _registry.CurrentNpcList.Clear();
+                _state.SwitchGetNpcPath = true;
+                _state.SwitchListFull = false;
+                if (playSound) Game1.playSound("bigDeSelect");
+                return;
+            }
+
             // Строки NPC
             int listW = BOX_W - PAD * 2;
             for (int i = _npcScrollOffset; i < Math.Min(_npcScrollOffset + NPC_VISIBLE, _filteredNpcs.Count); i++)
@@ -625,15 +670,21 @@ namespace NpcTrackerMod.UI
                 if (!row.Contains(x, y)) continue;
 
                 string name = _filteredNpcs[i];
-                if (name == _registry.CurrentNpcName && _state.SwitchTargetNPC)
+                if (_state.SwitchTargetNPC && _registry.SelectedNpcNames.Contains(name))
                 {
-                    // Повторный клик — снять выбор
-                    _state.SwitchTargetNPC = false;
-                    _registry.CurrentNpcName = null;
+                    // Повторный клик — снять выбор этого NPC
+                    _registry.SelectedNpcNames.Remove(name);
+                    if (_registry.SelectedNpcNames.Count == 0)
+                    {
+                        _state.SwitchTargetNPC = false;
+                        _registry.CurrentNpcName = null;
+                    }
                 }
                 else
                 {
+                    // Добавить NPC к выбранным
                     _state.SwitchTargetNPC = true;
+                    _registry.SelectedNpcNames.Add(name);
                     _registry.CurrentNpcName = name;
                     _state.NpcSelected = i;
                 }
@@ -660,6 +711,12 @@ namespace NpcTrackerMod.UI
                 if (playSound) Game1.playSound("smallSelect");
                 return;
             }
+            if (SelectNpcKeyBtnRect().Contains(x, y))
+            {
+                _rebindTarget = "select";
+                if (playSound) Game1.playSound("smallSelect");
+                return;
+            }
             if (TimePrevBtn().Contains(x, y)) { ChangeTimeFilter(-1); if (playSound) Game1.playSound("smallSelect"); }
             if (TimeNextBtn().Contains(x, y)) { ChangeTimeFilter(+1); if (playSound) Game1.playSound("smallSelect"); }
         }
@@ -671,8 +728,9 @@ namespace NpcTrackerMod.UI
                 if (key != Keys.Escape)
                 {
                     var btn = (StardewModdingAPI.SButton)(int)key;
-                    if (_rebindTarget == "menu") _config.MenuKey = btn;
-                    else _config.DebugKey = btn;
+                    if (_rebindTarget == "menu")        _config.MenuKey      = btn;
+                    else if (_rebindTarget == "debug")  _config.DebugKey     = btn;
+                    else if (_rebindTarget == "select") _config.SelectNpcKey = btn;
                     _saveConfig();
                 }
                 _rebindTarget = null;
