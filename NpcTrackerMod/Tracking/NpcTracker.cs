@@ -56,9 +56,9 @@ namespace NpcTrackerMod.Tracking
                 _state.SwitchListFull = true;
             }
 
-            // GetSelectedNpcName кэшируем до цикла — иначе вызывается для каждого NPC на каждом кадре
+            // CurrentNpcName — прямой источник истины; работает и при выборе из меню, и при клике в мире
             string targetName = _state.SwitchTargetNPC
-                ? _registry.GetSelectedNpcName(_state.NpcSelected)
+                ? _registry.CurrentNpcName
                 : null;
 
             foreach (var npc in npcs.Where(n => n != null && !string.IsNullOrWhiteSpace(n.Name)))

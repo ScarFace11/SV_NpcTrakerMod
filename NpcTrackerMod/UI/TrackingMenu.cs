@@ -124,6 +124,8 @@ namespace NpcTrackerMod.UI
                 () => _state.EnableDisplay, v => _state.EnableDisplay = v);
             AddCheck(ref y, x, "Отображение сетки",
                 () => _state.DisplayGrid, v => _state.DisplayGrid = v);
+            AddCheck(ref y, x, "Мини-HUD в углу экрана",
+                () => _state.EnableHud, v => _state.EnableHud = v);
 
             y += 36;  // визуальный разрыв + заголовок «Маршруты»
             y += 28;
@@ -268,7 +270,7 @@ namespace NpcTrackerMod.UI
 
         private void DrawMainTab(SpriteBatch b)
         {
-            if (_mainChecks.Count < 4) return;
+            if (_mainChecks.Count < 5) return;
 
             int x = BX + PAD + 6;
 
@@ -277,16 +279,17 @@ namespace NpcTrackerMod.UI
             DrawGroupHeader(b, "Отображение", x, g1Y);
             _mainChecks[0].Draw(b);
             _mainChecks[1].Draw(b);
+            _mainChecks[2].Draw(b);  // HUD
 
             // Разделитель
-            int divY = _mainChecks[1].Bounds.Bottom + 14;
+            int divY = _mainChecks[2].Bounds.Bottom + 14;
             DrawDivider(b, divY);
 
             // Группа: Маршруты
-            int g2Y = _mainChecks[2].Bounds.Y - 30;
+            int g2Y = _mainChecks[3].Bounds.Y - 30;
             DrawGroupHeader(b, "Маршруты", x, g2Y);
-            _mainChecks[2].Draw(b);
             _mainChecks[3].Draw(b);
+            _mainChecks[4].Draw(b);
         }
 
         // ── NPC ───────────────────────────────────────────────────────────────────────

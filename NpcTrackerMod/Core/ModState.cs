@@ -45,6 +45,9 @@ namespace NpcTrackerMod.Core
         /// </summary>
         public int TimeFilter { get; set; } = -1;
 
+        /// <summary> Показывать компактный HUD с информацией о NPC. </summary>
+        public bool EnableHud { get; set; }
+
         /// <summary> Предыдущие позиции NPC по имени (для восстановления цвета тайла при движении). </summary>
         public Dictionary<string, Point> NpcPreviousPositions { get; } = new Dictionary<string, Point>();
     }
