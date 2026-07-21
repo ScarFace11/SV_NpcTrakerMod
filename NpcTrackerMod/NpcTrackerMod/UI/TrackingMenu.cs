@@ -54,6 +54,7 @@ namespace NpcTrackerMod.UI
         // Настройки
         private string _rebindTarget;
         private int _timeFilterIndex;
+        private bool _draggingSlider;   // true пока LMB зажата на слайдере
 
         private static readonly int[] TimeSteps =
         {
@@ -197,6 +198,23 @@ namespace NpcTrackerMod.UI
         private int TimeRowY => BY + 331;
         private Rectangle TimePrevBtn() => new Rectangle(BX + BOX_W / 2 - 115, TimeRowY, 30, 30);
         private Rectangle TimeNextBtn() => new Rectangle(BX + BOX_W / 2 + 85, TimeRowY, 30, 30);
+
+        /// <summary> Трек слайдера под стрелками фильтра времени. </summary>
+        private Rectangle SliderTrackRect() =>
+            new Rectangle(BX + PAD, TimeRowY + 44, BOX_W - PAD * 2, 8);
+
+        /// <summary>
+        /// X-позиция большого пальца слайдера. -1 если фильтр = «все время».
+        /// Шаги 1..N (индексы в TimeSteps без нулевого -1 элемента).
+        /// </summary>
+        private int SliderThumbX()
+        {
+            if (_timeFilterIndex == 0) return -1;
+            var track = SliderTrackRect();
+            int steps = TimeSteps.Length - 1;   // кол-во шагов (600..2600)
+            float t = (float)(_timeFilterIndex - 1) / Math.Max(1, steps - 1);
+            return track.X + (int)(t * track.Width);
+        }
 
         // ── Позиции вкладок ───────────────────────────────────────────────────────────
 
@@ -456,9 +474,56 @@ namespace NpcTrackerMod.UI
             DrawArrow(b, TimeNextBtn(), left: false);
 
             string timeText = _state.TimeFilter < 0
-                ? "Всё время"
+                ? "Все время"
                 : RouteRenderer.FormatTime(_state.TimeFilter);
             DrawCentered(b, timeText, Game1.dialogueFont, TimeRowY + 2, new Color(200, 160, 30));
+
+            // ── Скруббер (слайдер) ────────────────────────────────────────────────
+            var track = SliderTrackRect();
+            bool hovTrack = new Rectangle(track.X, track.Y - 8, track.Width, track.Height + 16)
+                                .Contains(Game1.getMouseX(), Game1.getMouseY());
+
+            // Трек
+            b.Draw(Game1.staminaRect, track,
+                hovTrack || _draggingSlider
+                    ? new Color(180, 155, 100, 200)
+                    : new Color(180, 155, 100, 130));
+
+            // Заполненная часть (от начала до положения ползунка)
+            int thumbX = SliderThumbX();
+            if (thumbX >= 0)
+            {
+                int fillW = thumbX - track.X;
+                if (fillW > 0)
+                    b.Draw(Game1.staminaRect,
+                        new Rectangle(track.X, track.Y, fillW, track.Height),
+                        new Color(200, 160, 30, 180));
+
+                // Ползунок
+                bool thumbHov = Math.Abs(Game1.getMouseX() - thumbX) < 12;
+                b.Draw(Game1.staminaRect,
+                    new Rectangle(thumbX - 5, track.Y - 5, 10, track.Height + 10),
+                    _draggingSlider || thumbHov
+                        ? new Color(240, 195, 40)
+                        : new Color(210, 165, 28));
+            }
+            else
+            {
+                // «Все время» — серый ползунок у левого края
+                b.Draw(Game1.staminaRect,
+                    new Rectangle(track.X - 3, track.Y - 5, 8, track.Height + 10),
+                    new Color(160, 150, 130, 180));
+            }
+
+            // Метки начала и конца диапазона
+            string labelStart = "06:00";
+            string labelEnd   = "02:00";
+            float  labelY     = track.Bottom + 5;
+            Utility.drawTextWithShadow(b, labelStart, Game1.smallFont,
+                new Vector2(track.X, labelY), Color.Gray);
+            var endSz = Game1.smallFont.MeasureString(labelEnd);
+            Utility.drawTextWithShadow(b, labelEnd, Game1.smallFont,
+                new Vector2(track.Right - endSz.X, labelY), Color.Gray);
         }
 
         private void DrawKeybind(SpriteBatch b, int x, int y, string label, string key,
@@ -561,7 +626,7 @@ namespace NpcTrackerMod.UI
             // Подсказка
             DrawSectionHeader(b, "Подсказка", x, y); y += 32;
             Utility.drawTextWithShadow(b,
-                "Наведите курсор на тайл маршрута,\nчтобы увидеть имя NPC и время посещения.",
+                "Наведите курсор на тайл маршрута,\nчтобы увидеть имя NPC и время посещения.\nКликните — откроется инспектор тайла.",
                 Game1.smallFont, new Vector2(x, y), new Color(120, 110, 90));
         }
 
@@ -717,8 +782,46 @@ namespace NpcTrackerMod.UI
                 if (playSound) Game1.playSound("smallSelect");
                 return;
             }
-            if (TimePrevBtn().Contains(x, y)) { ChangeTimeFilter(-1); if (playSound) Game1.playSound("smallSelect"); }
-            if (TimeNextBtn().Contains(x, y)) { ChangeTimeFilter(+1); if (playSound) Game1.playSound("smallSelect"); }
+            if (TimePrevBtn().Contains(x, y)) { ChangeTimeFilter(-1); if (playSound) Game1.playSound("smallSelect"); return; }
+            if (TimeNextBtn().Contains(x, y)) { ChangeTimeFilter(+1); if (playSound) Game1.playSound("smallSelect"); return; }
+
+            // Клик по слайдеру времени
+            var track = SliderTrackRect();
+            var trackHit = new Rectangle(track.X, track.Y - 10, track.Width, track.Height + 20);
+            if (trackHit.Contains(x, y))
+            {
+                _draggingSlider = true;
+                ApplySliderX(x);
+                if (playSound) Game1.playSound("smallSelect");
+            }
+        }
+
+        /// <summary> Вычисляет индекс шага из X-координаты мыши и применяет фильтр. </summary>
+        private void ApplySliderX(int mouseX)
+        {
+            var track = SliderTrackRect();
+            float t = MathHelper.Clamp((float)(mouseX - track.X) / track.Width, 0f, 1f);
+            int steps  = TimeSteps.Length - 1;   // шаги 1..N
+            int newIdx = 1 + (int)(t * (steps - 1) + 0.5f);
+            newIdx = MathHelper.Clamp(newIdx, 1, TimeSteps.Length - 1);
+            if (newIdx == _timeFilterIndex) return;
+            _timeFilterIndex = newIdx;
+            _state.TimeFilter = TimeSteps[_timeFilterIndex];
+            _tiles.Clear();
+            _state.SwitchGetNpcPath = true;
+        }
+
+        public override void leftClickHeld(int x, int y)
+        {
+            if (_activeTab == 2 && _draggingSlider)
+                ApplySliderX(x);
+            base.leftClickHeld(x, y);
+        }
+
+        public override void releaseLeftClick(int x, int y)
+        {
+            _draggingSlider = false;
+            base.releaseLeftClick(x, y);
         }
 
         public override void receiveKeyPress(Keys key)

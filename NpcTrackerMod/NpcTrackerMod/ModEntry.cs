@@ -130,7 +130,7 @@ namespace NpcTrackerMod
             {
                 LogCurrentLocationWarps();
             }
-            // Фича 3: клик по тайлу маршрута — выбрать/снять NPC
+            // Клик по тайлу маршрута — открыть инспектор тайла
             else if (e.Button == _config.SelectNpcKey && _state.EnableDisplay)
             {
                 int tx = (int)((Game1.viewport.X + Game1.getMouseX()) / Game1.tileSize);
@@ -139,26 +139,9 @@ namespace NpcTrackerMod
 
                 if (_tileRenderer.TileOwners.TryGetValue(tile, out var owners) && owners.Count > 0)
                 {
-                    string clickedName = owners[0].NpcName;
-
-                    // Повторный клик по уже выбранному — убрать из выборки
-                    if (_registry.SelectedNpcNames.Contains(clickedName))
-                    {
-                        _registry.SelectedNpcNames.Remove(clickedName);
-                    }
-                    else
-                    {
-                        _registry.SelectedNpcNames.Add(clickedName);
-                        _registry.CurrentNpcName = clickedName;
-                    }
-
-                    // SwitchTargetNPC включён, пока есть хотя бы один выбранный NPC
-                    _state.SwitchTargetNPC = _registry.SelectedNpcNames.Count > 0;
-
-                    _tileRenderer.Clear();
-                    _registry.CurrentNpcList.Clear();
-                    _state.SwitchGetNpcPath = true;
-                    _state.SwitchListFull = false;
+                    Game1.activeClickableMenu = new TileInspectMenu(
+                        Monitor, _state, _registry, _tileRenderer,
+                        tile, owners, _registry.GameNpcs);
 
                     Helper.Input.Suppress(e.Button);
                     Game1.playSound("smallSelect");
@@ -195,14 +178,14 @@ namespace NpcTrackerMod
                             ? o.NpcName
                             : $"{o.NpcName} ({o.TimeInfo})");
 
-                        // Фича 4: следующая точка расписания
+                        // Следующая точка расписания
                         string nextHint = GetNextScheduleLabel(o.NpcName);
                         if (nextHint != null)
                             sb.Append($"\n  {nextHint}");
                     }
 
-                    // Подсказка: клавиша выбора
-                    sb.Append($"\n[{_config.SelectNpcKey}] Выбрать/снять NPC");
+                    // Подсказка: клик открывает инспектор
+                    sb.Append($"\n[{_config.SelectNpcKey}] Открыть инспектор");
                     IClickableMenu.drawHoverText(batch, sb.ToString(), Game1.smallFont);
                 }
             }
