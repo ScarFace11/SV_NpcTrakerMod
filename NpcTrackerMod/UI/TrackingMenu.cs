@@ -191,9 +191,10 @@ namespace NpcTrackerMod.UI
         // ── Позиции Settings-вкладки ─────────────────────────────────────────────────
 
         private Rectangle MenuKeyBtnRect() => new Rectangle(BX + BOX_W - 185, BY + 103, 162, 34);
-        private Rectangle DebugKeyBtnRect() => new Rectangle(BX + BOX_W - 185, BY + 150, 162, 34);
+        private Rectangle DebugKeyBtnRect()    => new Rectangle(BX + BOX_W - 185, BY + 150, 162, 34);
+        private Rectangle SelectNpcKeyBtnRect() => new Rectangle(BX + BOX_W - 185, BY + 197, 162, 34);
 
-        private int TimeRowY => BY + 284;
+        private int TimeRowY => BY + 331;
         private Rectangle TimePrevBtn() => new Rectangle(BX + BOX_W / 2 - 115, TimeRowY, 30, 30);
         private Rectangle TimeNextBtn() => new Rectangle(BX + BOX_W / 2 + 85, TimeRowY, 30, 30);
 
@@ -443,11 +444,12 @@ namespace NpcTrackerMod.UI
             DrawSectionHeader(b, "Горячие клавиши", x, BY + 62);
             DrawKeybind(b, x, BY + 100, "Открыть меню", _config.MenuKey.ToString(), "menu", MenuKeyBtnRect());
             DrawKeybind(b, x, BY + 147, "Отладка варпов", _config.DebugKey.ToString(), "debug", DebugKeyBtnRect());
+            DrawKeybind(b, x, BY + 194, "Выбрать NPC", _config.SelectNpcKey.ToString(), "select", SelectNpcKeyBtnRect());
 
-            DrawDivider(b, BY + 196);
+            DrawDivider(b, BY + 248);
 
             // Фильтр по времени
-            DrawSectionHeader(b, "Фильтр по времени", x, BY + 212);
+            DrawSectionHeader(b, "Фильтр по времени", x, BY + 264);
 
             // Кнопки ◄ ►
             DrawArrow(b, TimePrevBtn(), left: true);
@@ -709,6 +711,12 @@ namespace NpcTrackerMod.UI
                 if (playSound) Game1.playSound("smallSelect");
                 return;
             }
+            if (SelectNpcKeyBtnRect().Contains(x, y))
+            {
+                _rebindTarget = "select";
+                if (playSound) Game1.playSound("smallSelect");
+                return;
+            }
             if (TimePrevBtn().Contains(x, y)) { ChangeTimeFilter(-1); if (playSound) Game1.playSound("smallSelect"); }
             if (TimeNextBtn().Contains(x, y)) { ChangeTimeFilter(+1); if (playSound) Game1.playSound("smallSelect"); }
         }
@@ -720,8 +728,9 @@ namespace NpcTrackerMod.UI
                 if (key != Keys.Escape)
                 {
                     var btn = (StardewModdingAPI.SButton)(int)key;
-                    if (_rebindTarget == "menu") _config.MenuKey = btn;
-                    else _config.DebugKey = btn;
+                    if (_rebindTarget == "menu")        _config.MenuKey      = btn;
+                    else if (_rebindTarget == "debug")  _config.DebugKey     = btn;
+                    else if (_rebindTarget == "select") _config.SelectNpcKey = btn;
                     _saveConfig();
                 }
                 _rebindTarget = null;

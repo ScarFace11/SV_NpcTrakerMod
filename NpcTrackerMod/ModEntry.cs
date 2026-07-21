@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Microsoft.Xna.Framework;
@@ -122,9 +123,47 @@ namespace NpcTrackerMod
             if (Game1.activeClickableMenu != null || !Context.IsPlayerFree) return;
 
             if (e.Button == _config.MenuKey)
+            {
                 OpenMenu();
+            }
             else if (e.Button == _config.DebugKey)
+            {
                 LogCurrentLocationWarps();
+            }
+            // Фича 3: клик по тайлу маршрута — выбрать/снять NPC
+            else if (e.Button == _config.SelectNpcKey && _state.EnableDisplay)
+            {
+                int tx = (int)((Game1.viewport.X + Game1.getMouseX()) / Game1.tileSize);
+                int ty = (int)((Game1.viewport.Y + Game1.getMouseY()) / Game1.tileSize);
+                var tile = new Point(tx, ty);
+
+                if (_tileRenderer.TileOwners.TryGetValue(tile, out var owners) && owners.Count > 0)
+                {
+                    string clickedName = owners[0].NpcName;
+
+                    // Повторный клик по уже выбранному — убрать из выборки
+                    if (_registry.SelectedNpcNames.Contains(clickedName))
+                    {
+                        _registry.SelectedNpcNames.Remove(clickedName);
+                    }
+                    else
+                    {
+                        _registry.SelectedNpcNames.Add(clickedName);
+                        _registry.CurrentNpcName = clickedName;
+                    }
+
+                    // SwitchTargetNPC включён, пока есть хотя бы один выбранный NPC
+                    _state.SwitchTargetNPC = _registry.SelectedNpcNames.Count > 0;
+
+                    _tileRenderer.Clear();
+                    _registry.CurrentNpcList.Clear();
+                    _state.SwitchGetNpcPath = true;
+                    _state.SwitchListFull = false;
+
+                    Helper.Input.Suppress(e.Button);
+                    Game1.playSound("smallSelect");
+                }
+            }
         }
 
         private void OnRenderedWorld(object sender, RenderedWorldEventArgs e)
@@ -155,7 +194,15 @@ namespace NpcTrackerMod
                         sb.Append(string.IsNullOrEmpty(o.TimeInfo)
                             ? o.NpcName
                             : $"{o.NpcName} ({o.TimeInfo})");
+
+                        // Фича 4: следующая точка расписания
+                        string nextHint = GetNextScheduleLabel(o.NpcName);
+                        if (nextHint != null)
+                            sb.Append($"\n  {nextHint}");
                     }
+
+                    // Подсказка: клавиша выбора
+                    sb.Append($"\n[{_config.SelectNpcKey}] Выбрать/снять NPC");
                     IClickableMenu.drawHoverText(batch, sb.ToString(), Game1.smallFont);
                 }
             }
@@ -188,6 +235,36 @@ namespace NpcTrackerMod
             _state.NpcCount = npcCount;
 
             _registry.RefreshCurrentNpcList();
+        }
+
+        // ── Следующая точка расписания (Фича 4) ──────────────────────────────────
+
+        /// <summary>
+        /// Возвращает строку вида «→ Saloon в 12:00» — следующая запись расписания NPC
+        /// после текущего игрового времени. Null, если данных нет или день уже закончился.
+        /// </summary>
+        private string GetNextScheduleLabel(string npcName)
+        {
+            try
+            {
+                var npc = _registry.GameNpcs?.FirstOrDefault(n => n?.Name == npcName);
+                if (npc?.Schedule == null || npc.Schedule.Count == 0) return null;
+
+                int currentTime = Game1.timeOfDay;
+                int nextTime = 0;
+
+                foreach (int key in npc.Schedule.Keys.OrderBy(k => k))
+                {
+                    if (key > currentTime) { nextTime = key; break; }
+                }
+
+                if (nextTime == 0) return null;
+
+                var entry = npc.Schedule[nextTime];
+                string loc = entry.targetLocationName ?? "?";
+                return $"→ {loc} в {RouteRenderer.FormatTime(nextTime)}";
+            }
+            catch { return null; }
         }
 
         // ── Утилиты ───────────────────────────────────────────────────────────────
