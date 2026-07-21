@@ -1,0 +1,313 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using Microsoft.Xna.Framework;
+using NpcTrackerMod.Core;
+using NpcTrackerMod.Tracking;
+using StardewModdingAPI;
+using StardewValley;
+using StardewValley.Pathfinding;
+
+namespace NpcTrackerMod.Scheduling
+{
+    /// <summary>
+    /// Строит маршруты NPC из расписаний игры и кастомных модов.
+    /// </summary>
+    public class ScheduleProcessor
+    {
+        private readonly IMonitor _monitor;
+        private readonly NpcPathStore _store;
+        private readonly NpcRegistry _registry;
+        private readonly LocationMapper _mapper;
+
+        // Состояние текущего прохода по маршруту (сбрасывается после каждого NPC)
+        private string _lastLocationName;
+        private string _endLocationName;
+
+        public ScheduleProcessor(
+            IMonitor monitor,
+            NpcPathStore store,
+            NpcRegistry registry,
+            LocationMapper mapper)
+        {
+            _monitor  = monitor;
+            _store    = store;
+            _registry = registry;
+            _mapper   = mapper;
+        }
+
+        // ── Публичный API ────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Возвращает NPC, которых нужно визуализировать в текущем кадре.
+        /// </summary>
+        public IEnumerable<NPC> GetNpcsToTrack(bool allLocations, HashSet<string> tracked)
+        {
+            if (!allLocations)
+                return Game1.currentLocation?.characters
+                    .Where(n => tracked.Contains(n.Name))
+                    ?? Enumerable.Empty<NPC>();
+
+            return Game1.locations
+                .Where(loc => loc?.characters != null)
+                .SelectMany(loc => loc.characters)
+                .Where(n => n != null && tracked.Contains(n.Name));
+        }
+
+        /// <summary>
+        /// Строит дневной маршрут NPC из game.Schedule (предвычисленного движком).
+        /// Если расписание пустое — делегирует в BuildGlobalRoute.
+        /// </summary>
+        public void BuildDayRoutes(NPC npc)
+        {
+            if (npc.Schedule?.Any() != true)
+                return;
+
+            var totalPath = new Dictionary<string, HashSet<Point>>();
+            var timedPath = new Dictionary<int, Dictionary<string, HashSet<Point>>>();
+
+            _lastLocationName = null;
+
+            foreach (var entry in npc.Schedule)
+            {
+                var segments = FilterRouteByLocation(npc.currentLocation.Name, entry.Value.route);
+                NpcPathStore.MergeSegments(totalPath, segments);
+                if (segments.Count > 0)
+                    timedPath[entry.Key] = segments;
+            }
+
+            if (totalPath.Count == 0)
+            {
+                BuildGlobalRoute(npc, null, null, null);
+                return;
+            }
+
+            _registry.TotalNpcList.Add(npc.Name);
+            _store.TimedDayPaths[npc.Name] = timedPath;
+
+            _lastLocationName = null;
+            _store.AddPath(npc, _store.DayPaths, totalPath);
+        }
+
+        /// <summary>
+        /// Строит глобальный маршрут NPC по всем записям сырого расписания.
+        /// Используется как для built-in NPC (первый день), так и для кастомных (из модов).
+        /// </summary>
+        public void BuildGlobalRoute(NPC currentNpc, string npcName, string customPath, string customPathKey)
+        {
+            NPC npc = currentNpc ?? FindNpcByName(npcName);
+
+            if (npc == null)
+            {
+                _monitor.Log($"NPC '{npcName}' не найден при построении глобального маршрута.", LogLevel.Warn);
+                return;
+            }
+
+            if (customPath == null && npc.Schedule?.Any() != true)
+                return;
+
+            var masterSchedule = BuildMasterSchedule(npc, customPath, customPathKey);
+            _registry.TotalNpcList.Add(npc.Name);
+
+            var totalPath = new Dictionary<string, HashSet<Point>>();
+
+            try
+            {
+                foreach (var kvp in masterSchedule)
+                {
+                    if (!ScheduleEntryParser.IsValid(kvp.Key, kvp.Value))
+                    {
+                        _monitor.Log($"NPC {npc.Name}: пропуск невалидного ключа '{kvp.Key}'", LogLevel.Warn);
+                        _monitor.Log(kvp.Value, LogLevel.Debug);
+                        continue;
+                    }
+
+                    try
+                    {
+                        ProcessMasterScheduleEntry(npc, kvp.Key, kvp.Value, totalPath);
+                    }
+                    catch (Exception ex)
+                    {
+                        _monitor.Log($"Ошибка обработки ключа '{kvp.Key}' для '{npc.Name}': {ex.Message}", LogLevel.Error);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _monitor.Log($"Ошибка глобального маршрута '{npc.Name}': {ex.Message}", LogLevel.Error);
+            }
+
+            _lastLocationName = null;
+            _store.AddPath(npc, _store.GlobalPaths, totalPath);
+        }
+
+        // ── Внутренняя обработка ─────────────────────────────────────────────────
+
+        private void ProcessMasterScheduleEntry(
+            NPC npc,
+            string key,
+            string rawData,
+            Dictionary<string, HashSet<Point>> totalPath)
+        {
+            var slots = rawData.Split('/');
+            string lastLocation = npc.currentLocation?.Name;
+
+            var npcLocation = _endLocationName == null
+                ? Game1.locations.FirstOrDefault(loc => loc.Name == npc.currentLocation?.Name)
+                : Game1.locations.FirstOrDefault(loc => loc.Name == _endLocationName);
+            _endLocationName = null;
+
+            if (npcLocation == null)
+            {
+                _monitor.Log($"Не найдена локация для '{npc.Name}'", LogLevel.Warn);
+                return;
+            }
+
+            var npcInLocation = npcLocation.characters.FirstOrDefault(n => n.Name == npc.Name);
+            int npcX = (int)(npcInLocation?.TilePoint.X ?? 0);
+            int npcY = (int)(npcInLocation?.TilePoint.Y ?? 0);
+
+            _lastLocationName = null;
+
+            foreach (var slot in slots)
+            {
+                if (ScheduleEntryParser.ShouldSkip(slot)) continue;
+                var parts = slot.Split(' ');
+                if (parts.Length <= 2) continue;
+
+                ScheduleEntryParser.Parse(parts, _lastLocationName,
+                    out string time, out string locationName,
+                    out int x, out int y,
+                    out int facingDir, out string endBehavior, out string endMessage);
+
+                // Анимационные локации SpaceCore вида "a1000", "a1200" и т.д. —
+                // NPC не перемещается, просто играет анимацию на месте. Пропускаем.
+                if (IsAnimationLocation(locationName))
+                    continue;
+
+                try
+                {
+                    var pathDesc = npc.pathfindToNextScheduleLocation(
+                        time, lastLocation, npcX, npcY,
+                        locationName, x, y,
+                        facingDir, endBehavior, endMessage);
+
+                    if (pathDesc?.route != null)
+                    {
+                        NpcPathStore.MergeSegments(totalPath,
+                            FilterRouteByLocation(npc.currentLocation?.Name, pathDesc.route));
+                        lastLocation = locationName;
+                        npcX = x;
+                        npcY = y;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _monitor.Log(
+                        $"Pathfind error: {npc.Name} {lastLocation}({npcX},{npcY}) → {locationName}({x},{y}) @ {time}: {ex.Message}",
+                        LogLevel.Error);
+                    lastLocation = locationName;
+                    npcX = x;
+                    npcY = y;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Разбивает стек точек маршрута на сегменты по локациям.
+        /// Разрыв смежности (> 1 тайл) = переход через варп в новую локацию.
+        /// </summary>
+        public Dictionary<string, HashSet<Point>> FilterRouteByLocation(
+            string startLocation, Stack<Point> points)
+        {
+            var result = new Dictionary<string, HashSet<Point>>();
+
+            if (string.IsNullOrEmpty(startLocation) || points == null || !points.Any())
+            {
+                _monitor.Log(
+                    $"FilterRoute: пустой маршрут для '{startLocation}' ({points?.Count ?? 0} точек)",
+                    LogLevel.Debug);
+                return result;
+            }
+
+            if (_lastLocationName == null)
+                _lastLocationName = startLocation;
+
+            var currentSegment = new HashSet<Point>();
+            var prevCoord = Point.Zero;
+
+            foreach (var pt in points)
+            {
+                if (prevCoord == Point.Zero)
+                {
+                    prevCoord = pt;
+                    currentSegment.Add(pt);
+                    continue;
+                }
+
+                bool adjacent = Math.Abs(pt.X - prevCoord.X) <= 1 &&
+                                Math.Abs(pt.Y - prevCoord.Y) <= 1;
+
+                if (adjacent)
+                {
+                    currentSegment.Add(pt);
+                    prevCoord = pt;
+                }
+                else
+                {
+                    AppendSegment(result, _lastLocationName, currentSegment);
+                    currentSegment = new HashSet<Point>();
+                    _lastLocationName = _mapper.GetDestination(_lastLocationName, prevCoord);
+                    prevCoord = pt;
+                }
+            }
+
+            if (currentSegment.Count > 0)
+                AppendSegment(result, _lastLocationName, currentSegment);
+
+            return result;
+        }
+
+        // ── Вспомогательные ──────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Возвращает true, если имя локации является анимационным ключом SpaceCore
+        /// (формат: буква 'a' + цифры, например a1000, a1200).
+        /// Такие локации не являются картами — NPC просто играет анимацию на месте.
+        /// </summary>
+        private static bool IsAnimationLocation(string locationName)
+        {
+            if (string.IsNullOrEmpty(locationName) || locationName.Length < 2)
+                return false;
+            if (locationName[0] != 'a')
+                return false;
+            for (int i = 1; i < locationName.Length; i++)
+                if (!char.IsDigit(locationName[i]))
+                    return false;
+            return true;
+        }
+
+        private NPC FindNpcByName(string name)
+            => _registry.GameNpcs?.FirstOrDefault(
+                n => string.Equals(n.Name, name, StringComparison.OrdinalIgnoreCase));
+
+        private Dictionary<string, string> BuildMasterSchedule(NPC npc, string customPath, string customKey)
+        {
+            if (npc.Schedule != null && npc.Schedule.Any())
+                return npc.getMasterScheduleRawData();
+
+            return new Dictionary<string, string> { [customKey] = customPath };
+        }
+
+        private static void AppendSegment(
+            Dictionary<string, HashSet<Point>> result,
+            string location,
+            HashSet<Point> segment)
+        {
+            if (!result.TryGetValue(location, out var existing))
+                result[location] = new HashSet<Point>(segment);
+            else
+                existing.UnionWith(segment);
+        }
+    }
+}
