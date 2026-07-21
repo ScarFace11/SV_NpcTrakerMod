@@ -12,5 +12,8 @@ namespace NpcTrackerMod
 
         /// <summary> Клавиша отладочного вывода варпов. </summary>
         public SButton DebugKey { get; set; } = SButton.Z;
+
+        /// <summary> Клавиша выбора/снятия NPC при наведении на тайл маршрута. </summary>
+        public SButton SelectNpcKey { get; set; } = SButton.MouseMiddle;
     }
 }

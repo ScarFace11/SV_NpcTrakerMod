@@ -48,22 +48,9 @@ namespace NpcTrackerMod.Tracking
 
             if (!npcs.Any()) return;
 
-            // Формируем список текущей локации один раз при первом рендере в режиме "один NPC"
-            if (_state.SwitchTargetNPC && !_state.SwitchListFull)
-            {
-                _registry.AddToCurrentList(npcs);
-                _registry.CurrentNpcList.Sort();
-                _state.SwitchListFull = true;
-            }
-
-            // GetSelectedNpcName кэшируем до цикла — иначе вызывается для каждого NPC на каждом кадре
-            string targetName = _state.SwitchTargetNPC
-                ? _registry.GetSelectedNpcName(_state.NpcSelected)
-                : null;
-
             foreach (var npc in npcs.Where(n => n != null && !string.IsNullOrWhiteSpace(n.Name)))
             {
-                if (!_state.SwitchTargetNPC || npc.Name == targetName)
+                if (!_state.SwitchTargetNPC || _registry.SelectedNpcNames.Contains(npc.Name))
                 {
                     _routeRenderer.DrawRoute(npc);
                     _routeRenderer.DrawPositionTile(npc);

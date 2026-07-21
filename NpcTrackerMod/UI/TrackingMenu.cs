@@ -46,7 +46,7 @@ namespace NpcTrackerMod.UI
 
         // NPC
         private string _npcSearch = string.Empty;
-        private string _npcModFilter;          // null = все
+        private string _npcModFilter;            // null = все
         private bool _searchFocused;
         private int _npcScrollOffset;
         private List<string> _filteredNpcs = new List<string>();
@@ -54,6 +54,7 @@ namespace NpcTrackerMod.UI
         // Настройки
         private string _rebindTarget;
         private int _timeFilterIndex;
+        private bool _draggingSlider;   // true пока LMB зажата на слайдере
 
         private static readonly int[] TimeSteps =
         {
@@ -176,8 +177,11 @@ namespace NpcTrackerMod.UI
 
         // ── Позиции NPC-вкладки (единый источник для draw и click) ──────────────────
 
+        private const int RESET_BTN_W = 130;
         private Rectangle NpcSearchRect() =>
-            new Rectangle(BX + PAD, BY + 58, BOX_W - PAD * 2, 36);
+            new Rectangle(BX + PAD, BY + 58, BOX_W - PAD * 2 - RESET_BTN_W - 8, 36);
+        private Rectangle NpcResetBtnRect() =>
+            new Rectangle(BX + BOX_W - PAD - RESET_BTN_W, BY + 58, RESET_BTN_W, 36);
 
         private int NpcFilterY => NpcSearchRect().Bottom + 8;
         private int NpcListY => NpcFilterY + 34;   // chip 28px + gap 6px
@@ -188,11 +192,29 @@ namespace NpcTrackerMod.UI
         // ── Позиции Settings-вкладки ─────────────────────────────────────────────────
 
         private Rectangle MenuKeyBtnRect() => new Rectangle(BX + BOX_W - 185, BY + 103, 162, 34);
-        private Rectangle DebugKeyBtnRect() => new Rectangle(BX + BOX_W - 185, BY + 150, 162, 34);
+        private Rectangle DebugKeyBtnRect()    => new Rectangle(BX + BOX_W - 185, BY + 150, 162, 34);
+        private Rectangle SelectNpcKeyBtnRect() => new Rectangle(BX + BOX_W - 185, BY + 197, 162, 34);
 
-        private int TimeRowY => BY + 284;
+        private int TimeRowY => BY + 331;
         private Rectangle TimePrevBtn() => new Rectangle(BX + BOX_W / 2 - 115, TimeRowY, 30, 30);
         private Rectangle TimeNextBtn() => new Rectangle(BX + BOX_W / 2 + 85, TimeRowY, 30, 30);
+
+        /// <summary> Трек слайдера под стрелками фильтра времени. </summary>
+        private Rectangle SliderTrackRect() =>
+            new Rectangle(BX + PAD, TimeRowY + 44, BOX_W - PAD * 2, 8);
+
+        /// <summary>
+        /// X-позиция большого пальца слайдера. -1 если фильтр = «все время».
+        /// Шаги 1..N (индексы в TimeSteps без нулевого -1 элемента).
+        /// </summary>
+        private int SliderThumbX()
+        {
+            if (_timeFilterIndex == 0) return -1;
+            var track = SliderTrackRect();
+            int steps = TimeSteps.Length - 1;   // кол-во шагов (600..2600)
+            float t = (float)(_timeFilterIndex - 1) / Math.Max(1, steps - 1);
+            return track.X + (int)(t * track.Width);
+        }
 
         // ── Позиции вкладок ───────────────────────────────────────────────────────────
 
@@ -299,6 +321,9 @@ namespace NpcTrackerMod.UI
             // Фильтры по модам
             DrawModChips(b);
 
+            // Кнопка сброса выбора
+            DrawResetButton(b);
+
             // Разделитель
             DrawDivider(b, NpcListY - 6);
 
@@ -363,7 +388,7 @@ namespace NpcTrackerMod.UI
             for (int i = _npcScrollOffset; i < end; i++)
             {
                 string npc = _filteredNpcs[i];
-                bool selected = npc == _registry.CurrentNpcName && _state.SwitchTargetNPC;
+                bool selected = _state.SwitchTargetNPC && _registry.SelectedNpcNames.Contains(npc);
                 var row = NpcRowRect(i - _npcScrollOffset, listW);
 
                 if (selected)
@@ -372,8 +397,23 @@ namespace NpcTrackerMod.UI
                     b.Draw(Game1.staminaRect, row, new Color(200, 195, 180, 55));
 
                 float textY = row.Y + (row.Height - Game1.dialogueFont.MeasureString("A").Y) / 2f;
+
+                // ── Аватарка NPC (слева от имени, вписана в высоту строки) ──
+                int textX = row.X + 10;
+                var gameNpc = _registry.GameNpcs?.FirstOrDefault(n => n?.Name == npc);
+                if (gameNpc?.Portrait != null)
+                {
+                    int ava = Math.Min((int)Game1.dialogueFont.MeasureString("A").Y, row.Height - 4);
+                    int avaY = row.Y + (row.Height - ava) / 2;
+                    b.Draw(gameNpc.Portrait,
+                        new Rectangle(textX, avaY, ava, ava),
+                        new Rectangle(0, 0, 64, 64),
+                        Color.White);
+                    textX += ava + 6;
+                }
+
                 Utility.drawTextWithShadow(b, npc, Game1.dialogueFont,
-                    new Vector2(row.X + 10, textY),
+                    new Vector2(textX, textY),
                     selected ? new Color(120, 70, 10) : Game1.textColor);
 
                 if (_registry.NpcModSource.TryGetValue(npc, out string src))
@@ -409,6 +449,24 @@ namespace NpcTrackerMod.UI
                 new Color(130, 100, 60, 200));
         }
 
+        private void DrawResetButton(SpriteBatch b)
+        {
+            var rect = NpcResetBtnRect();
+            bool hasSelection = _state.SwitchTargetNPC && _registry.SelectedNpcNames.Count > 0;
+            var bgColor = hasSelection ? new Color(200, 80, 60) : new Color(180, 165, 140, 120);
+            var textColor = hasSelection ? Color.White : new Color(140, 130, 115);
+
+            drawTextureBox(b, Game1.menuTexture, new Rectangle(0, 256, 60, 60),
+                rect.X, rect.Y, rect.Width, rect.Height, bgColor, 0.85f, false);
+
+            string label = "Сбросить выбор";
+            var sz = Game1.smallFont.MeasureString(label);
+            Utility.drawTextWithShadow(b, label, Game1.smallFont,
+                new Vector2(rect.X + (rect.Width - sz.X) / 2f,
+                            rect.Y + (rect.Height - sz.Y) / 2f),
+                textColor);
+        }
+
         // ── Настройки ─────────────────────────────────────────────────────────────────
 
         private void DrawSettingsTab(SpriteBatch b)
@@ -419,20 +477,68 @@ namespace NpcTrackerMod.UI
             DrawSectionHeader(b, "Горячие клавиши", x, BY + 62);
             DrawKeybind(b, x, BY + 100, "Открыть меню", _config.MenuKey.ToString(), "menu", MenuKeyBtnRect());
             DrawKeybind(b, x, BY + 147, "Отладка варпов", _config.DebugKey.ToString(), "debug", DebugKeyBtnRect());
+            DrawKeybind(b, x, BY + 194, "Выбрать NPC", _config.SelectNpcKey.ToString(), "select", SelectNpcKeyBtnRect());
 
-            DrawDivider(b, BY + 196);
+            DrawDivider(b, BY + 248);
 
             // Фильтр по времени
-            DrawSectionHeader(b, "Фильтр по времени", x, BY + 212);
+            DrawSectionHeader(b, "Фильтр по времени", x, BY + 264);
 
             // Кнопки ◄ ►
             DrawArrow(b, TimePrevBtn(), left: true);
             DrawArrow(b, TimeNextBtn(), left: false);
 
             string timeText = _state.TimeFilter < 0
-                ? "Всё время"
+                ? "Все время"
                 : RouteRenderer.FormatTime(_state.TimeFilter);
             DrawCentered(b, timeText, Game1.dialogueFont, TimeRowY + 2, new Color(200, 160, 30));
+
+            // ── Скруббер (слайдер) ────────────────────────────────────────────────
+            var track = SliderTrackRect();
+            bool hovTrack = new Rectangle(track.X, track.Y - 8, track.Width, track.Height + 16)
+                                .Contains(Game1.getMouseX(), Game1.getMouseY());
+
+            // Трек
+            b.Draw(Game1.staminaRect, track,
+                hovTrack || _draggingSlider
+                    ? new Color(180, 155, 100, 200)
+                    : new Color(180, 155, 100, 130));
+
+            // Заполненная часть (от начала до положения ползунка)
+            int thumbX = SliderThumbX();
+            if (thumbX >= 0)
+            {
+                int fillW = thumbX - track.X;
+                if (fillW > 0)
+                    b.Draw(Game1.staminaRect,
+                        new Rectangle(track.X, track.Y, fillW, track.Height),
+                        new Color(200, 160, 30, 180));
+
+                // Ползунок
+                bool thumbHov = Math.Abs(Game1.getMouseX() - thumbX) < 12;
+                b.Draw(Game1.staminaRect,
+                    new Rectangle(thumbX - 5, track.Y - 5, 10, track.Height + 10),
+                    _draggingSlider || thumbHov
+                        ? new Color(240, 195, 40)
+                        : new Color(210, 165, 28));
+            }
+            else
+            {
+                // «Все время» — серый ползунок у левого края
+                b.Draw(Game1.staminaRect,
+                    new Rectangle(track.X - 3, track.Y - 5, 8, track.Height + 10),
+                    new Color(160, 150, 130, 180));
+            }
+
+            // Метки начала и конца диапазона
+            string labelStart = "06:00";
+            string labelEnd   = "02:00";
+            float  labelY     = track.Bottom + 5;
+            Utility.drawTextWithShadow(b, labelStart, Game1.smallFont,
+                new Vector2(track.X, labelY), Color.Gray);
+            var endSz = Game1.smallFont.MeasureString(labelEnd);
+            Utility.drawTextWithShadow(b, labelEnd, Game1.smallFont,
+                new Vector2(track.Right - endSz.X, labelY), Color.Gray);
         }
 
         private void DrawKeybind(SpriteBatch b, int x, int y, string label, string key,
@@ -492,11 +598,19 @@ namespace NpcTrackerMod.UI
             DrawSectionHeader(b, "Статистика NPC", x, y); y += 36;
             DrawKV(b, "Отслеживается", _registry.TotalNpcList.Count.ToString(), x, ref y);
             DrawKV(b, "В текущей локации", (Game1.currentLocation?.characters.Count ?? 0).ToString(), x, ref y);
-            DrawKV(b, "Выбранный NPC",
-                _state.SwitchTargetNPC && _registry.CurrentNpcName != null
-                    ? _registry.CurrentNpcName
-                    : "не выбран",
+            DrawKV(b, "Выбрано NPC",
+                _state.SwitchTargetNPC && _registry.SelectedNpcNames.Count > 0
+                    ? _registry.SelectedNpcNames.Count.ToString()
+                    : "не выбраны",
                 x, ref y);
+            if (_state.SwitchTargetNPC && _registry.SelectedNpcNames.Count > 0)
+            {
+                foreach (var sn in _registry.SelectedNpcNames.OrderBy(n => n))
+                {
+                    DrawKV(b, "  •", sn, x, ref y);
+                    if (y > BY + BOX_H - 60) break;
+                }
+            }
 
             DrawDivider(b, y + 6); y += 26;
 
@@ -527,7 +641,7 @@ namespace NpcTrackerMod.UI
             // Подсказка
             DrawSectionHeader(b, "Подсказка", x, y); y += 32;
             Utility.drawTextWithShadow(b,
-                "Наведите курсор на тайл маршрута,\nчтобы увидеть имя NPC и время посещения.",
+                "Наведите курсор на тайл маршрута,\nчтобы увидеть имя NPC и время посещения.\nКликните — откроется инспектор тайла.",
                 Game1.smallFont, new Vector2(x, y), new Color(120, 110, 90));
         }
 
@@ -614,6 +728,20 @@ namespace NpcTrackerMod.UI
                 return;
             }
 
+            // Кнопка сброса выбора
+            if (NpcResetBtnRect().Contains(x, y))
+            {
+                _registry.SelectedNpcNames.Clear();
+                _registry.CurrentNpcName = null;
+                _state.SwitchTargetNPC = false;
+                _tiles.Clear();
+                _registry.CurrentNpcList.Clear();
+                _state.SwitchGetNpcPath = true;
+                _state.SwitchListFull = false;
+                if (playSound) Game1.playSound("bigDeSelect");
+                return;
+            }
+
             // Строки NPC
             int listW = BOX_W - PAD * 2;
             for (int i = _npcScrollOffset; i < Math.Min(_npcScrollOffset + NPC_VISIBLE, _filteredNpcs.Count); i++)
@@ -622,15 +750,21 @@ namespace NpcTrackerMod.UI
                 if (!row.Contains(x, y)) continue;
 
                 string name = _filteredNpcs[i];
-                if (name == _registry.CurrentNpcName && _state.SwitchTargetNPC)
+                if (_state.SwitchTargetNPC && _registry.SelectedNpcNames.Contains(name))
                 {
-                    // Повторный клик — снять выбор
-                    _state.SwitchTargetNPC = false;
-                    _registry.CurrentNpcName = null;
+                    // Повторный клик — снять выбор этого NPC
+                    _registry.SelectedNpcNames.Remove(name);
+                    if (_registry.SelectedNpcNames.Count == 0)
+                    {
+                        _state.SwitchTargetNPC = false;
+                        _registry.CurrentNpcName = null;
+                    }
                 }
                 else
                 {
+                    // Добавить NPC к выбранным
                     _state.SwitchTargetNPC = true;
+                    _registry.SelectedNpcNames.Add(name);
                     _registry.CurrentNpcName = name;
                     _state.NpcSelected = i;
                 }
@@ -657,8 +791,52 @@ namespace NpcTrackerMod.UI
                 if (playSound) Game1.playSound("smallSelect");
                 return;
             }
-            if (TimePrevBtn().Contains(x, y)) { ChangeTimeFilter(-1); if (playSound) Game1.playSound("smallSelect"); }
-            if (TimeNextBtn().Contains(x, y)) { ChangeTimeFilter(+1); if (playSound) Game1.playSound("smallSelect"); }
+            if (SelectNpcKeyBtnRect().Contains(x, y))
+            {
+                _rebindTarget = "select";
+                if (playSound) Game1.playSound("smallSelect");
+                return;
+            }
+            if (TimePrevBtn().Contains(x, y)) { ChangeTimeFilter(-1); if (playSound) Game1.playSound("smallSelect"); return; }
+            if (TimeNextBtn().Contains(x, y)) { ChangeTimeFilter(+1); if (playSound) Game1.playSound("smallSelect"); return; }
+
+            // Клик по слайдеру времени
+            var track = SliderTrackRect();
+            var trackHit = new Rectangle(track.X, track.Y - 10, track.Width, track.Height + 20);
+            if (trackHit.Contains(x, y))
+            {
+                _draggingSlider = true;
+                ApplySliderX(x);
+                if (playSound) Game1.playSound("smallSelect");
+            }
+        }
+
+        /// <summary> Вычисляет индекс шага из X-координаты мыши и применяет фильтр. </summary>
+        private void ApplySliderX(int mouseX)
+        {
+            var track = SliderTrackRect();
+            float t = MathHelper.Clamp((float)(mouseX - track.X) / track.Width, 0f, 1f);
+            int steps  = TimeSteps.Length - 1;   // шаги 1..N
+            int newIdx = 1 + (int)(t * (steps - 1) + 0.5f);
+            newIdx = MathHelper.Clamp(newIdx, 1, TimeSteps.Length - 1);
+            if (newIdx == _timeFilterIndex) return;
+            _timeFilterIndex = newIdx;
+            _state.TimeFilter = TimeSteps[_timeFilterIndex];
+            _tiles.Clear();
+            _state.SwitchGetNpcPath = true;
+        }
+
+        public override void leftClickHeld(int x, int y)
+        {
+            if (_activeTab == 2 && _draggingSlider)
+                ApplySliderX(x);
+            base.leftClickHeld(x, y);
+        }
+
+        public override void releaseLeftClick(int x, int y)
+        {
+            _draggingSlider = false;
+            base.releaseLeftClick(x, y);
         }
 
         public override void receiveKeyPress(Keys key)
@@ -668,8 +846,9 @@ namespace NpcTrackerMod.UI
                 if (key != Keys.Escape)
                 {
                     var btn = (StardewModdingAPI.SButton)(int)key;
-                    if (_rebindTarget == "menu") _config.MenuKey = btn;
-                    else _config.DebugKey = btn;
+                    if (_rebindTarget == "menu")        _config.MenuKey      = btn;
+                    else if (_rebindTarget == "debug")  _config.DebugKey     = btn;
+                    else if (_rebindTarget == "select") _config.SelectNpcKey = btn;
                     _saveConfig();
                 }
                 _rebindTarget = null;
