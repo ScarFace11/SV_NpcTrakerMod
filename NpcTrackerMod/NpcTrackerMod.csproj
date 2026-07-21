@@ -1,26 +1,3 @@
-<<<<<<< HEAD
-<Project Sdk="Microsoft.NET.Sdk">
-
-  <PropertyGroup>
-    <OutputType>Library</OutputType>
-    <TargetFramework>net6.0</TargetFramework>
-    <EnableHarmony>true</EnableHarmony>
-    <LangVersion>10.0</LangVersion>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>disable</ImplicitUsings>
-    <RootNamespace>NpcTrackerMod</RootNamespace>
-    <AssemblyName>NpcTrackerMod</AssemblyName>
-    <Deterministic>true</Deterministic>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
-    <PackageReference Include="Pathoschild.Stardew.ModBuildConfig" Version="4.4.0" />
-    <PackageReference Include="System.ValueTuple" Version="4.6.2" />
-  </ItemGroup>
-
-</Project>
-=======
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
@@ -41,4 +18,3 @@
   </ItemGroup>
 
 </Project>
->>>>>>> b42f0bffc3c1fe77a77e5fbe9c3c8bb7e9359d8c
