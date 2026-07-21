@@ -4,8 +4,7 @@
     <OutputType>Library</OutputType>
     <TargetFramework>net6.0</TargetFramework>
     <EnableHarmony>true</EnableHarmony>
-    <LangVersion>10.0</LangVersion>
-    <Nullable>enable</Nullable>
+    <NoWarn>8632</NoWarn>
     <ImplicitUsings>disable</ImplicitUsings>
     <RootNamespace>NpcTrackerMod</RootNamespace>
     <AssemblyName>NpcTrackerMod</AssemblyName>
