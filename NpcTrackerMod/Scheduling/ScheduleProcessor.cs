@@ -21,8 +21,8 @@ namespace NpcTrackerMod.Scheduling
         private readonly LocationMapper _mapper;
 
         // Состояние текущего прохода по маршруту (сбрасывается после каждого NPC)
-        private string? _lastLocationName;
-        private string? _endLocationName;
+        private string _lastLocationName;
+        private string _endLocationName;
 
         public ScheduleProcessor(
             IMonitor monitor,
@@ -93,7 +93,7 @@ namespace NpcTrackerMod.Scheduling
         /// Строит глобальный маршрут NPC по всем записям сырого расписания.
         /// Используется как для built-in NPC (первый день), так и для кастомных (из модов).
         /// </summary>
-        public void BuildGlobalRoute(NPC? currentNpc, string? npcName, string? customPath, string? customPathKey)
+        public void BuildGlobalRoute(NPC currentNpc, string npcName, string customPath, string customPathKey)
         {
             NPC npc = currentNpc ?? FindNpcByName(npcName);
 
@@ -150,7 +150,7 @@ namespace NpcTrackerMod.Scheduling
             Dictionary<string, HashSet<Point>> totalPath)
         {
             var slots = rawData.Split('/');
-            string? lastLocation = npc.currentLocation?.Name;
+            string lastLocation = npc.currentLocation?.Name;
 
             var npcLocation = _endLocationName == null
                 ? Game1.locations.FirstOrDefault(loc => loc.Name == npc.currentLocation?.Name)
@@ -178,7 +178,7 @@ namespace NpcTrackerMod.Scheduling
                 ScheduleEntryParser.Parse(parts, _lastLocationName,
                     out string time, out string locationName,
                     out int x, out int y,
-                    out int facingDir, out string? endBehavior, out string? endMessage);
+                    out int facingDir, out string endBehavior, out string endMessage);
 
                 // Анимационные локации SpaceCore вида "a1000", "a1200" и т.д. —
                 // NPC не перемещается, просто играет анимацию на месте. Пропускаем.
@@ -218,7 +218,7 @@ namespace NpcTrackerMod.Scheduling
         /// Разрыв смежности (> 1 тайл) = переход через варп в новую локацию.
         /// </summary>
         public Dictionary<string, HashSet<Point>> FilterRouteByLocation(
-            string? startLocation, Stack<Point>? points)
+            string startLocation, Stack<Point> points)
         {
             var result = new Dictionary<string, HashSet<Point>>();
 
@@ -287,11 +287,11 @@ namespace NpcTrackerMod.Scheduling
             return true;
         }
 
-        private NPC? FindNpcByName(string? name)
+        private NPC FindNpcByName(string name)
             => _registry.GameNpcs?.FirstOrDefault(
                 n => string.Equals(n.Name, name, StringComparison.OrdinalIgnoreCase));
 
-        private Dictionary<string, string> BuildMasterSchedule(NPC npc, string? customPath, string? customKey)
+        private Dictionary<string, string> BuildMasterSchedule(NPC npc, string customPath, string customKey)
         {
             if (npc.Schedule != null && npc.Schedule.Any())
                 return npc.getMasterScheduleRawData();
@@ -301,7 +301,7 @@ namespace NpcTrackerMod.Scheduling
 
         private static void AppendSegment(
             Dictionary<string, HashSet<Point>> result,
-            string? location,
+            string location,
             HashSet<Point> segment)
         {
             if (!result.TryGetValue(location, out var existing))

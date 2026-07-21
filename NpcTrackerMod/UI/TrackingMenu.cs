@@ -46,13 +46,13 @@ namespace NpcTrackerMod.UI
 
         // NPC
         private string _npcSearch = string.Empty;
-        private string? _npcModFilter;          // null = все
+        private string _npcModFilter;            // null = все
         private bool _searchFocused;
         private int _npcScrollOffset;
         private List<string> _filteredNpcs = new List<string>();
 
         // Настройки
-        private string? _rebindTarget;
+        private string _rebindTarget;
         private int _timeFilterIndex;
 
         private static readonly int[] TimeSteps =
@@ -64,7 +64,7 @@ namespace NpcTrackerMod.UI
         };
 
         // Кнопка закрытия
-        private ClickableTextureComponent _closeBtn = null!;
+        private ClickableTextureComponent _closeBtn;
 
         // Короткие ссылки на позиции
         private int BX => xPositionOnScreen;

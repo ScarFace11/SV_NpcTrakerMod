@@ -25,14 +25,14 @@ namespace NpcTrackerMod.Scheduling
         /// <param name="endMessage">Строка диалога (или null).</param>
         public static void Parse(
             string[] parts,
-            string? lastLocationName,
+            string lastLocationName,
             out string time,
             out string locationName,
             out int x,
             out int y,
             out int facingDirection,
-            out string? endBehavior,
-            out string? endMessage)
+            out string endBehavior,
+            out string endMessage)
         {
             time = "0";
             locationName = string.Empty;
