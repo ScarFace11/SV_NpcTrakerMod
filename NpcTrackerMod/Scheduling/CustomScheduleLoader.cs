@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -26,8 +26,8 @@ namespace NpcTrackerMod.Scheduling
         private readonly Dictionary<string, Dictionary<string, List<string>>> _rawPaths
             = new Dictionary<string, Dictionary<string, List<string>>>();
 
-        private string _currentNpcName;
-        private string _currentModName;
+        private string? _currentNpcName;
+        private string? _currentModName;
 
         /// <summary> Имя NPC → название мода-источника (из manifest.json). </summary>
         public Dictionary<string, string> NpcModNames { get; } = new Dictionary<string, string>();
@@ -189,7 +189,7 @@ namespace NpcTrackerMod.Scheduling
 
         // ── Извлечение имени NPC ──────────────────────────────────────────────────
 
-        private string ExtractNpcName(JObject root, string filePath)
+        private string? ExtractNpcName(JObject root, string filePath)
         {
             if (root.TryGetValue("Changes", out var changes) && changes is JArray arr)
             {
@@ -202,13 +202,13 @@ namespace NpcTrackerMod.Scheduling
             return GetNpcNameFromPath(filePath);
         }
 
-        private static string GetNpcNameFromTarget(JToken change)
+        private static string? GetNpcNameFromTarget(JToken change)
         {
             var target = change["Target"]?.ToString();
             return string.IsNullOrEmpty(target) ? null : target.Split('/').Last();
         }
 
-        private static string GetNpcNameFromPath(string filePath)
+        private static string? GetNpcNameFromPath(string filePath)
         {
             string fileName = Path.GetFileNameWithoutExtension(filePath);
             return fileName.Equals("Schedule", StringComparison.OrdinalIgnoreCase)

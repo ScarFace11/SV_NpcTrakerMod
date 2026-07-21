@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Text;
 using Microsoft.Xna.Framework;
@@ -21,21 +21,21 @@ namespace NpcTrackerMod
     public class ModEntry : Mod
     {
         // ── Сервисы (создаются в Entry) ───────────────────────────────────────────
-        private ModState _state;
-        private NpcPathStore _pathStore;
-        private LocationMapper _locationMapper;
-        private NpcRegistry _registry;
-        private ScheduleProcessor _scheduleProcessor;
-        private CustomScheduleLoader _scheduleLoader;
-        private TileRenderer _tileRenderer;
-        private RouteRenderer _routeRenderer;
-        private NpcTracker _tracker;
-        private ModConfig _config;
+        private ModState _state = null!;
+        private NpcPathStore _pathStore = null!;
+        private LocationMapper _locationMapper = null!;
+        private NpcRegistry _registry = null!;
+        private ScheduleProcessor _scheduleProcessor = null!;
+        private CustomScheduleLoader _scheduleLoader = null!;
+        private TileRenderer _tileRenderer = null!;
+        private RouteRenderer _routeRenderer = null!;
+        private NpcTracker _tracker = null!;
+        private ModConfig _config = null!;
 
         // ── Служебное состояние ───────────────────────────────────────────────────
         private bool _globalRoutesBuilt;
         private bool _dayActive;
-        private string _previousLocationName;
+        private string? _previousLocationName;
 
         // ── Entry ─────────────────────────────────────────────────────────────────
 
@@ -197,7 +197,7 @@ namespace NpcTrackerMod
             _registry.NpcModSource.Clear();
             foreach (string name in _registry.TotalNpcList)
             {
-                _registry.NpcModSource[name] = _scheduleLoader.NpcModNames.TryGetValue(name, out string mod)
+                _registry.NpcModSource[name] = _scheduleLoader.NpcModNames.TryGetValue(name, out string? mod)
                     ? mod
                     : "Жители деревни";
             }

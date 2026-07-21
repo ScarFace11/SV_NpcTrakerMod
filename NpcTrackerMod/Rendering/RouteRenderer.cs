@@ -87,8 +87,8 @@ namespace NpcTrackerMod.Rendering
                 }
 
                 string targetLocation = _state.SwitchTargetLocations
-                    ? Game1.player.currentLocation.Name
-                    : npc.currentLocation.Name;
+                    ? (Game1.player.currentLocation?.Name ?? string.Empty)
+                    : (npc.currentLocation?.Name ?? string.Empty);
 
                 if (pathData.TryGetValue(targetLocation, out var tileSet))
                 {

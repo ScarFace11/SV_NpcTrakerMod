@@ -60,7 +60,7 @@ namespace NpcTrackerMod.Rendering
         /// Регистрирует NPC как владельца тайла (для тултипа).
         /// Дубликаты одного NPC на том же тайле игнорируются.
         /// </summary>
-        public void RegisterOwner(Point tile, string npcName, string timeInfo = null)
+        public void RegisterOwner(Point tile, string npcName, string? timeInfo = null)
         {
             if (!TileOwners.TryGetValue(tile, out var list))
             {
