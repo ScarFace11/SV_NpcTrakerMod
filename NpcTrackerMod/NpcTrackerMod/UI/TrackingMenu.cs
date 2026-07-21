@@ -176,8 +176,11 @@ namespace NpcTrackerMod.UI
 
         // ── Позиции NPC-вкладки (единый источник для draw и click) ──────────────────
 
+        private const int RESET_BTN_W = 130;
         private Rectangle NpcSearchRect() =>
-            new Rectangle(BX + PAD, BY + 58, BOX_W - PAD * 2, 36);
+            new Rectangle(BX + PAD, BY + 58, BOX_W - PAD * 2 - RESET_BTN_W - 8, 36);
+        private Rectangle NpcResetBtnRect() =>
+            new Rectangle(BX + BOX_W - PAD - RESET_BTN_W, BY + 58, RESET_BTN_W, 36);
 
         private int NpcFilterY => NpcSearchRect().Bottom + 8;
         private int NpcListY => NpcFilterY + 34;   // chip 28px + gap 6px
@@ -299,6 +302,9 @@ namespace NpcTrackerMod.UI
             // Фильтры по модам
             DrawModChips(b);
 
+            // Кнопка сброса выбора
+            DrawResetButton(b);
+
             // Разделитель
             DrawDivider(b, NpcListY - 6);
 
@@ -363,7 +369,7 @@ namespace NpcTrackerMod.UI
             for (int i = _npcScrollOffset; i < end; i++)
             {
                 string npc = _filteredNpcs[i];
-                bool selected = npc == _registry.CurrentNpcName && _state.SwitchTargetNPC;
+                bool selected = _state.SwitchTargetNPC && _registry.SelectedNpcNames.Contains(npc);
                 var row = NpcRowRect(i - _npcScrollOffset, listW);
 
                 if (selected)
@@ -407,6 +413,24 @@ namespace NpcTrackerMod.UI
                 new Color(180, 165, 140, 100));
             b.Draw(Game1.staminaRect, new Rectangle(trackX, thumbY, 6, thumbH),
                 new Color(130, 100, 60, 200));
+        }
+
+        private void DrawResetButton(SpriteBatch b)
+        {
+            var rect = NpcResetBtnRect();
+            bool hasSelection = _state.SwitchTargetNPC && _registry.SelectedNpcNames.Count > 0;
+            var bgColor = hasSelection ? new Color(200, 80, 60) : new Color(180, 165, 140, 120);
+            var textColor = hasSelection ? Color.White : new Color(140, 130, 115);
+
+            drawTextureBox(b, Game1.menuTexture, new Rectangle(0, 256, 60, 60),
+                rect.X, rect.Y, rect.Width, rect.Height, bgColor, 0.85f, false);
+
+            string label = "Сбросить выбор";
+            var sz = Game1.smallFont.MeasureString(label);
+            Utility.drawTextWithShadow(b, label, Game1.smallFont,
+                new Vector2(rect.X + (rect.Width - sz.X) / 2f,
+                            rect.Y + (rect.Height - sz.Y) / 2f),
+                textColor);
         }
 
         // ── Настройки ─────────────────────────────────────────────────────────────────
@@ -492,11 +516,19 @@ namespace NpcTrackerMod.UI
             DrawSectionHeader(b, "Статистика NPC", x, y); y += 36;
             DrawKV(b, "Отслеживается", _registry.TotalNpcList.Count.ToString(), x, ref y);
             DrawKV(b, "В текущей локации", (Game1.currentLocation?.characters.Count ?? 0).ToString(), x, ref y);
-            DrawKV(b, "Выбранный NPC",
-                _state.SwitchTargetNPC && _registry.CurrentNpcName != null
-                    ? _registry.CurrentNpcName
-                    : "не выбран",
+            DrawKV(b, "Выбрано NPC",
+                _state.SwitchTargetNPC && _registry.SelectedNpcNames.Count > 0
+                    ? _registry.SelectedNpcNames.Count.ToString()
+                    : "не выбраны",
                 x, ref y);
+            if (_state.SwitchTargetNPC && _registry.SelectedNpcNames.Count > 0)
+            {
+                foreach (var sn in _registry.SelectedNpcNames.OrderBy(n => n))
+                {
+                    DrawKV(b, "  •", sn, x, ref y);
+                    if (y > BY + BOX_H - 60) break;
+                }
+            }
 
             DrawDivider(b, y + 6); y += 26;
 
@@ -614,6 +646,20 @@ namespace NpcTrackerMod.UI
                 return;
             }
 
+            // Кнопка сброса выбора
+            if (NpcResetBtnRect().Contains(x, y))
+            {
+                _registry.SelectedNpcNames.Clear();
+                _registry.CurrentNpcName = null;
+                _state.SwitchTargetNPC = false;
+                _tiles.Clear();
+                _registry.CurrentNpcList.Clear();
+                _state.SwitchGetNpcPath = true;
+                _state.SwitchListFull = false;
+                if (playSound) Game1.playSound("bigDeSelect");
+                return;
+            }
+
             // Строки NPC
             int listW = BOX_W - PAD * 2;
             for (int i = _npcScrollOffset; i < Math.Min(_npcScrollOffset + NPC_VISIBLE, _filteredNpcs.Count); i++)
@@ -622,15 +668,21 @@ namespace NpcTrackerMod.UI
                 if (!row.Contains(x, y)) continue;
 
                 string name = _filteredNpcs[i];
-                if (name == _registry.CurrentNpcName && _state.SwitchTargetNPC)
+                if (_state.SwitchTargetNPC && _registry.SelectedNpcNames.Contains(name))
                 {
-                    // Повторный клик — снять выбор
-                    _state.SwitchTargetNPC = false;
-                    _registry.CurrentNpcName = null;
+                    // Повторный клик — снять выбор этого NPC
+                    _registry.SelectedNpcNames.Remove(name);
+                    if (_registry.SelectedNpcNames.Count == 0)
+                    {
+                        _state.SwitchTargetNPC = false;
+                        _registry.CurrentNpcName = null;
+                    }
                 }
                 else
                 {
+                    // Добавить NPC к выбранным
                     _state.SwitchTargetNPC = true;
+                    _registry.SelectedNpcNames.Add(name);
                     _registry.CurrentNpcName = name;
                     _state.NpcSelected = i;
                 }

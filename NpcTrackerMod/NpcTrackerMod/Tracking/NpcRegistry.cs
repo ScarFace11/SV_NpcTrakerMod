@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Xna.Framework;
 using NpcTrackerMod.Core;
@@ -25,8 +25,11 @@ namespace NpcTrackerMod.Tracking
         /// <summary> Все NPC игры (обновляется в начале дня). </summary>
         public List<NPC> GameNpcs { get; private set; }
 
-        /// <summary> Имя выбранного NPC (сохраняется при RefreshCurrentNpcList). </summary>
+        /// <summary> Имя последнего выбранного NPC (сохраняется при RefreshCurrentNpcList). </summary>
         public string CurrentNpcName { get; set; }
+
+        /// <summary> Множество NPC, выбранных для одновременного отслеживания. </summary>
+        public HashSet<string> SelectedNpcNames { get; } = new HashSet<string>();
 
         /// <summary> Источник каждого NPC: "Жители деревни" или название мода. </summary>
         public Dictionary<string, string> NpcModSource { get; } = new Dictionary<string, string>();
@@ -126,6 +129,7 @@ namespace NpcTrackerMod.Tracking
             CurrentNpcList.Clear();
             BlacklistedNpcs.Clear();
             CurrentNpcName = null;
+            SelectedNpcNames.Clear();
         }
     }
 }
