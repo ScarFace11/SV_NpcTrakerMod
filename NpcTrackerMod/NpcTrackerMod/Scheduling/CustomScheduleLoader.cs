@@ -1,0 +1,260 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text.RegularExpressions;
+using Newtonsoft.Json.Linq;
+using NpcTrackerMod.Tracking;
+using StardewModdingAPI;
+
+namespace NpcTrackerMod.Scheduling
+{
+    /// <summary>
+    /// Загружает расписания NPC из JSON-файлов других модов (Content Patcher формат).
+    /// Отвечает только за I/O и парсинг — без игровой логики.
+    /// </summary>
+    public class CustomScheduleLoader
+    {
+        private readonly IMonitor _monitor;
+        private readonly IModHelper _helper;
+        private readonly ScheduleProcessor _processor;
+        private readonly NpcRegistry _registry;
+
+        /// <summary>
+        /// Собранные расписания: имя NPC → ключ расписания → список строк маршрутов.
+        /// </summary>
+        private readonly Dictionary<string, Dictionary<string, List<string>>> _rawPaths
+            = new Dictionary<string, Dictionary<string, List<string>>>();
+
+        private string _currentNpcName;
+        private string _currentModName;
+
+        /// <summary> Имя NPC → название мода-источника (из manifest.json). </summary>
+        public Dictionary<string, string> NpcModNames { get; } = new Dictionary<string, string>();
+
+        public CustomScheduleLoader(
+            IMonitor monitor,
+            IModHelper helper,
+            ScheduleProcessor processor,
+            NpcRegistry registry)
+        {
+            _monitor = monitor;
+            _helper = helper;
+            _processor = processor;
+            _registry = registry;
+        }
+
+        // ── Публичный API ────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Обходит папку Mods и загружает расписания из всех папок Schedules/*.json.
+        /// Вызывается один раз при старте мода.
+        /// </summary>
+        public void LoadAll()
+        {
+            try
+            {
+                string modsRoot = Path.Combine(_helper.DirectoryPath, "..", "..", "Mods");
+
+                foreach (var modFolder in Directory.GetDirectories(modsRoot))
+                {
+                    string schedulesFolder = FindSchedulesFolder(modFolder);
+                    if (!string.IsNullOrEmpty(schedulesFolder))
+                    {
+                        _currentModName = GetModDisplayName(modFolder);
+                        LoadFolder(schedulesFolder);
+                    }
+                }
+
+                _monitor.Log("Все кастомные расписания загружены.", LogLevel.Debug);
+            }
+            catch (Exception ex)
+            {
+                _monitor.Log($"Ошибка загрузки кастомных расписаний: {ex.Message}", LogLevel.Error);
+            }
+        }
+
+        /// <summary>
+        /// Передаёт загруженные расписания в ScheduleProcessor для построения глобальных маршрутов.
+        /// Вызывается в первый DayStarted, когда GameNpcs уже известны.
+        /// </summary>
+        public void TransferToProcessor()
+        {
+            var knownNames = _registry.GameNpcs != null
+                ? new HashSet<string>(_registry.GameNpcs.Select(n => n.Name))
+                : new HashSet<string>();
+
+            foreach (var npcEntry in _rawPaths)
+            {
+                string npcName = npcEntry.Key;
+
+                if (!knownNames.Contains(npcName))
+                {
+                    _monitor.Log(
+                        $"Пропуск кастомного расписания: '{npcName}' не является активным NPC",
+                        LogLevel.Debug);
+                    continue;
+                }
+
+                foreach (var scheduleEntry in npcEntry.Value)
+                {
+                    foreach (var path in scheduleEntry.Value)
+                        _processor.BuildGlobalRoute(null, npcName, path, scheduleEntry.Key);
+                }
+            }
+        }
+
+        // ── Загрузка файлов ───────────────────────────────────────────────────────
+
+        private void LoadFolder(string folderPath)
+        {
+            foreach (var file in Directory.GetFiles(folderPath, "*.json", SearchOption.AllDirectories))
+                LoadFile(file);
+        }
+
+        private void LoadFile(string filePath)
+        {
+            try
+            {
+                string json = JsonUtils.RemoveComments(File.ReadAllText(filePath));
+                var root = Newtonsoft.Json.JsonConvert.DeserializeObject<JObject>(json);
+
+                if (root == null)
+                {
+                    _monitor.Log($"Файл пропущен (некорректный JSON): {filePath}", LogLevel.Warn);
+                    return;
+                }
+
+                _currentNpcName = ExtractNpcName(root, filePath);
+
+                if (root.TryGetValue("Changes", out var changesToken))
+                    ProcessChanges(changesToken, filePath);
+                else
+                    AddScheduleEntries(root);
+            }
+            catch (Exception ex)
+            {
+                _monitor.Log($"Ошибка загрузки файла {filePath}: {ex.Message}", LogLevel.Error);
+            }
+        }
+
+        private void ProcessChanges(JToken changesToken, string filePath)
+        {
+            if (changesToken is not JArray changesArray)
+            {
+                _monitor.Log($"'Changes' не является массивом в {filePath}", LogLevel.Warn);
+                return;
+            }
+
+            foreach (var change in changesArray)
+            {
+                if (change["Entries"] is not JToken entriesToken)
+                {
+                    _monitor.Log($"Change без 'Entries' в {filePath} — пропуск.", LogLevel.Debug);
+                    continue;
+                }
+
+                if (ContainsI18nTokens(entriesToken)) continue;
+
+                if (entriesToken is JObject entriesObj)
+                    AddScheduleEntries(entriesObj);
+                else
+                    _monitor.Log($"'Entries' не является объектом в {filePath}", LogLevel.Warn);
+            }
+        }
+
+        private void AddScheduleEntries(JObject entries)
+        {
+            if (string.IsNullOrEmpty(_currentNpcName)) return;
+
+            if (!_rawPaths.TryGetValue(_currentNpcName, out var npcSchedule))
+            {
+                npcSchedule = new Dictionary<string, List<string>>();
+                _rawPaths[_currentNpcName] = npcSchedule;
+                _monitor.Log($"Добавлен кастомный NPC: {_currentNpcName}", LogLevel.Trace);
+                if (!NpcModNames.ContainsKey(_currentNpcName))
+                    NpcModNames[_currentNpcName] = _currentModName ?? "Unknown";
+            }
+
+            foreach (var entry in entries)
+            {
+                if (!npcSchedule.TryGetValue(entry.Key, out var list))
+                {
+                    list = new List<string>();
+                    npcSchedule[entry.Key] = list;
+                }
+                list.Add(entry.Value.ToString());
+            }
+        }
+
+        // ── Извлечение имени NPC ──────────────────────────────────────────────────
+
+        private string ExtractNpcName(JObject root, string filePath)
+        {
+            if (root.TryGetValue("Changes", out var changes) && changes is JArray arr)
+            {
+                foreach (var change in arr)
+                {
+                    string name = GetNpcNameFromTarget(change);
+                    if (!string.IsNullOrEmpty(name)) return name;
+                }
+            }
+            return GetNpcNameFromPath(filePath);
+        }
+
+        private static string GetNpcNameFromTarget(JToken change)
+        {
+            var target = change["Target"]?.ToString();
+            return string.IsNullOrEmpty(target) ? null : target.Split('/').Last();
+        }
+
+        private static string GetNpcNameFromPath(string filePath)
+        {
+            string fileName = Path.GetFileNameWithoutExtension(filePath);
+            return fileName.Equals("Schedule", StringComparison.OrdinalIgnoreCase)
+                ? Path.GetFileName(Path.GetDirectoryName(filePath))
+                : fileName;
+        }
+
+        // ── Вспомогательные ───────────────────────────────────────────────────────
+
+        private static string GetModDisplayName(string modFolder)
+        {
+            try
+            {
+                string manifestPath = Path.Combine(modFolder, "manifest.json");
+                if (File.Exists(manifestPath))
+                {
+                    var manifest = Newtonsoft.Json.JsonConvert.DeserializeObject<JObject>(
+                        JsonUtils.RemoveComments(File.ReadAllText(manifestPath)));
+                    string name = manifest?["Name"]?.ToString();
+                    if (!string.IsNullOrEmpty(name)) return name;
+                }
+            }
+            catch { /* fallback to folder name */ }
+            return Path.GetFileName(modFolder);
+        }
+
+        private static string FindSchedulesFolder(string modRoot)
+        {
+            try
+            {
+                return Directory
+                    .EnumerateDirectories(modRoot, "*", SearchOption.AllDirectories)
+                    .FirstOrDefault(d =>
+                        Path.GetFileName(d).Equals("Schedules", StringComparison.OrdinalIgnoreCase))
+                    ?? string.Empty;
+            }
+            catch { return string.Empty; }
+        }
+
+        private static bool ContainsI18nTokens(JToken token)
+        {
+            if (token is not JObject obj) return false;
+            foreach (var prop in obj)
+                if (prop.Value.ToString().Contains("{{i18n:")) return true;
+            return false;
+        }
+
+    }
+}
