@@ -23,10 +23,10 @@ namespace NpcTrackerMod.Tracking
         public List<string> CurrentNpcList { get; private set; } = new List<string>();
 
         /// <summary> Все NPC игры (обновляется в начале дня). </summary>
-        public List<NPC> GameNpcs { get; private set; } = null!;
+        public List<NPC> GameNpcs { get; private set; }
 
         /// <summary> Имя последнего выбранного NPC (сохраняется при RefreshCurrentNpcList). </summary>
-        public string? CurrentNpcName { get; set; }
+        public string CurrentNpcName { get; set; }
 
         /// <summary> Множество NPC, выбранных для одновременного отслеживания. </summary>
         public HashSet<string> SelectedNpcNames { get; } = new HashSet<string>();
@@ -76,7 +76,7 @@ namespace NpcTrackerMod.Tracking
 
             CurrentNpcName = CurrentNpcList.Contains(prevName)
                 ? prevName
-                : CurrentNpcList.FirstOrDefault();
+                : CurrentNpcList.Count > 0 ? CurrentNpcList[0] : null;
         }
 
         /// <summary>
@@ -96,7 +96,7 @@ namespace NpcTrackerMod.Tracking
         /// Возвращает имя NPC под индексом <paramref name="selectedIndex"/>
         /// или null, если список пуст, индекс некорректен или у NPC нет дневного пути.
         /// </summary>
-        public string? GetSelectedNpcName(int selectedIndex)
+        public string GetSelectedNpcName(int selectedIndex)
         {
             if (CurrentNpcList.Count == 0 || selectedIndex >= CurrentNpcList.Count)
                 return null;
