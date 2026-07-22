@@ -91,8 +91,32 @@ namespace NpcTrackerMod.UI
             int idx = Array.IndexOf(TimeSteps, _state.TimeFilter);
             _timeFilterIndex = idx >= 0 ? idx : 0;
 
+            // Подписываемся на текстовый ввод ОС — поддерживает любую раскладку
+            Game1.game1.Window.TextInput += OnWindowTextInput;
+
             InitPosition();
             RebuildTab();
+        }
+
+        /// <summary>
+        /// Получает символ от ОС при вводе текста (кириллица, латиница и т.д.).
+        /// Срабатывает только когда поле поиска NPC активно.
+        /// </summary>
+        private void OnWindowTextInput(object sender, TextInputEventArgs e)
+        {
+            if (!_searchFocused) return;
+            if (_npcSearch.Length >= 30) return;
+            if (char.IsControl(e.Character)) return;
+
+            _npcSearch += e.Character;
+            _npcScrollOffset = 0;
+            RebuildNpcFilter();
+        }
+
+        protected override void cleanupBeforeExit()
+        {
+            Game1.game1.Window.TextInput -= OnWindowTextInput;
+            base.cleanupBeforeExit();
         }
 
         private void InitPosition()
@@ -870,21 +894,6 @@ namespace NpcTrackerMod.UI
             }
 
             base.receiveKeyPress(key);
-        }
-
-        /// <summary>
-        /// Получает символ от операционной системы (поддерживает любую раскладку: кириллицу, латиницу и т.д.).
-        /// Вызывается игрой для активного меню при каждом текстовом вводе.
-        /// </summary>
-        public override void receiveTextInput(char inputChar)
-        {
-            if (!_searchFocused) return;
-            if (_npcSearch.Length >= 30) return;
-            if (char.IsControl(inputChar)) return; // фильтруем спец-символы (\t, \n и т.д.)
-
-            _npcSearch += inputChar;
-            _npcScrollOffset = 0;
-            RebuildNpcFilter();
         }
 
         public override void receiveScrollWheelAction(int direction)
