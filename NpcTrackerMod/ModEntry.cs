@@ -68,7 +68,8 @@ namespace NpcTrackerMod
         {
             // Rendering и Tracking инициализируются здесь — GraphicsDevice гарантированно готов
             _tileRenderer = new TileRenderer(Game1.graphics.GraphicsDevice);
-            _routeRenderer = new RouteRenderer(Monitor, _state, _pathStore, _tileRenderer);
+            _tileRenderer.Alpha = _config.RouteAlpha;
+            _routeRenderer = new RouteRenderer(Monitor, _state, _pathStore, _tileRenderer, _config);
             _tracker = new NpcTracker(_state, _registry, _scheduleProcessor, _routeRenderer, _tileRenderer);
 
             // Подписки на события, требующие инициализированного рендерера

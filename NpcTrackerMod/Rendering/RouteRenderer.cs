@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Xna.Framework;
+using NpcTrackerMod;
 using NpcTrackerMod.Core;
 using StardewModdingAPI;
 using StardewValley;
@@ -18,17 +19,24 @@ namespace NpcTrackerMod.Rendering
         private readonly ModState _state;
         private readonly NpcPathStore _store;
         private readonly TileRenderer _tiles;
+        private readonly ModConfig _config;
+
+        // Переиспользуемый буфер для TimeFilter — не создаётся каждый кадр
+        private readonly Dictionary<string, HashSet<Point>> _timedPathBuffer
+            = new Dictionary<string, HashSet<Point>>();
 
         public RouteRenderer(
             IMonitor monitor,
             ModState state,
             NpcPathStore store,
-            TileRenderer tiles)
+            TileRenderer tiles,
+            ModConfig config)
         {
             _monitor = monitor;
             _state = state;
             _store = store;
             _tiles = tiles;
+            _config = config;
         }
 
         // ── Публичный API ────────────────────────────────────────────────────────
@@ -58,21 +66,22 @@ namespace NpcTrackerMod.Rendering
                          _store.TimedDayPaths.TryGetValue(npc.Name, out var timedPath) &&
                          timedPath.Any())
                 {
-                    pathData = new Dictionary<string, HashSet<Point>>();
+                    _timedPathBuffer.Clear();
                     int lastTime = -1;
                     foreach (var kvp in timedPath.Where(t => t.Key <= _state.TimeFilter))
                     {
                         foreach (var loc in kvp.Value)
                         {
-                            if (!pathData.TryGetValue(loc.Key, out var pts))
-                                pathData[loc.Key] = new HashSet<Point>(loc.Value);
+                            if (!_timedPathBuffer.TryGetValue(loc.Key, out var pts))
+                                _timedPathBuffer[loc.Key] = new HashSet<Point>(loc.Value);
                             else
                                 pts.UnionWith(loc.Value);
                         }
                         lastTime = kvp.Key;
                     }
-                    if (pathData.Count == 0) return;
+                    if (_timedPathBuffer.Count == 0) return;
                     timeLabel = $"До {FormatTime(lastTime)}";
+                    pathData = _timedPathBuffer;
                 }
                 else
                 {
@@ -94,7 +103,7 @@ namespace NpcTrackerMod.Rendering
                 {
                     foreach (var coord in tileSet)
                     {
-                        _tiles.MarkTile(coord, Color.Green, 2);
+                        _tiles.MarkTile(coord, ModConfig.ParseColor(_config.RouteColor, Color.Green), 2);
                         _tiles.RegisterOwner(coord, npc.Name, timeLabel ?? "Маршрут");
                     }
                 }
@@ -123,7 +132,7 @@ namespace NpcTrackerMod.Rendering
                 _tiles.RestorePosition(prev);
 
             _state.NpcPreviousPositions[name] = currentTile;
-            _tiles.MarkNpcPosition(currentTile, Color.Blue, 1);
+            _tiles.MarkNpcPosition(currentTile, ModConfig.ParseColor(_config.PositionColor, Color.Blue), 1);
             _tiles.RegisterOwner(currentTile, name, "Сейчас здесь");
         }
 
