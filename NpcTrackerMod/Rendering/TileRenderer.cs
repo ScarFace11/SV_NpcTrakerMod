@@ -29,6 +29,13 @@ namespace NpcTrackerMod.Rendering
         public readonly int TileSize = Game1.tileSize;
         private readonly Texture2D _lineTexture;
 
+        /// <summary>Прозрачность тайлов маршрута (0.0–1.0). Синхронизируется с ModConfig.RouteAlpha.</summary>
+        public float Alpha { get; set; } = 0.3f;
+
+        // Кеш тайловой сетки: пересчитывается только при смене локации
+        private string _cachedGridLocation;
+        private readonly List<Point> _cachedGridTiles = new List<Point>();
+
         public TileRenderer(GraphicsDevice graphicsDevice)
         {
             _lineTexture = new Texture2D(graphicsDevice, 1, 1);
@@ -92,25 +99,41 @@ namespace NpcTrackerMod.Rendering
             }
         }
 
-        /// <summary> Рисует тайловую сетку для всей текущей локации. </summary>
+        /// <summary>
+        /// Рисует тайловую сетку для текущей локации.
+        /// Список тайлов кешируется при смене локации — не пересчитывается каждый кадр.
+        /// </summary>
         public void DrawGrid(SpriteBatch batch, Vector2 cameraOffset)
         {
-            var map = Game1.currentLocation.Map.Layers[0];
-            for (int x = 0; x < map.LayerWidth; x++)
-            for (int y = 0; y < map.LayerHeight; y++)
+            string locName = Game1.currentLocation?.Name;
+            if (locName != _cachedGridLocation)
             {
-                var pos = new Vector2(x * TileSize, y * TileSize) - cameraOffset;
+                _cachedGridTiles.Clear();
+                _cachedGridLocation = locName;
+                if (Game1.currentLocation != null)
+                {
+                    var map = Game1.currentLocation.Map.Layers[0];
+                    for (int x = 0; x < map.LayerWidth; x++)
+                    for (int y = 0; y < map.LayerHeight; y++)
+                        _cachedGridTiles.Add(new Point(x, y));
+                }
+            }
+
+            foreach (var pt in _cachedGridTiles)
+            {
+                var pos = new Vector2(pt.X * TileSize, pt.Y * TileSize) - cameraOffset;
                 DrawTileOutline(batch, pos, Color.Black);
             }
         }
 
         // ── Сброс ────────────────────────────────────────────────────────────────
 
-        /// <summary> Очищает состояние тайлов и владельцев (смена локации / начало дня). </summary>
+        /// <summary>Очищает состояние тайлов, владельцев и кеш сетки (смена локации / начало дня).</summary>
         public void Clear()
         {
             TileStates.Clear();
             TileOwners.Clear();
+            _cachedGridLocation = null;
         }
 
         // ── Приватные хелперы ─────────────────────────────────────────────────────
@@ -118,7 +141,7 @@ namespace NpcTrackerMod.Rendering
         private void DrawFilledTile(SpriteBatch batch, Vector2 pos, Color color)
         {
             var rect = new Rectangle((int)pos.X, (int)pos.Y, TileSize, TileSize);
-            batch.Draw(_lineTexture, rect, new Color(color, 0.05f));
+            batch.Draw(_lineTexture, rect, new Color(color, Alpha));
         }
 
         private void DrawTileOutline(SpriteBatch batch, Vector2 pos, Color color)

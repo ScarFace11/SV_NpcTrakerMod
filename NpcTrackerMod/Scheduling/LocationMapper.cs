@@ -47,12 +47,12 @@ namespace NpcTrackerMod.Scheduling
 
         /// <summary>
         /// Возвращает имя локации, куда телепортируется NPC из <paramref name="fromLocation"/>
-        /// с позиции <paramref name="position"/>. Возвращает "Null" если переход не найден.
+        /// с позиции <paramref name="position"/>. Возвращает <c>null</c> если переход не найден.
         /// </summary>
         public string GetDestination(string fromLocation, Point position)
         {
             if (!TeleportCoords.TryGetValue(fromLocation, out var entries))
-                return "Null";
+                return null;
 
             foreach (var entry in entries)
             {
@@ -64,7 +64,7 @@ namespace NpcTrackerMod.Scheduling
                 $"Варп не найден: {fromLocation} @ {position}",
                 LogLevel.Debug);
 
-            return "Null";
+            return null;
         }
     }
 }

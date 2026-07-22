@@ -54,7 +54,10 @@ namespace NpcTrackerMod.Scheduling
         {
             try
             {
-                string modsRoot = Path.Combine(_helper.DirectoryPath, "..", "..", "Mods");
+                // DirectoryPath указывает на папку мода (…/Mods/NpcTrackerMod).
+                // GetDirectoryName возвращает родительский каталог — саму папку Mods,
+                // независимо от ОС и расположения игры.
+                string modsRoot = Path.GetDirectoryName(_helper.DirectoryPath);
 
                 foreach (var modFolder in Directory.GetDirectories(modsRoot))
                 {

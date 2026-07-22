@@ -40,16 +40,9 @@ namespace NpcTrackerMod.Tracking
         /// </summary>
         public void DrawPaths(SpriteBatch spriteBatch, Vector2 cameraOffset)
         {
-            // ToList() — единственная материализация IEnumerable;
-            // без неё Game1.locations обходился бы дважды (Any + foreach).
-            var npcs = _processor
-                .GetNpcsToTrack(_state.SwitchTargetLocations, _registry.TotalNpcList)
-                .ToList();
-
-            if (!npcs.Any()) return;
-
-            foreach (var npc in npcs.Where(n => n != null && !string.IsNullOrWhiteSpace(n.Name)))
+            foreach (var npc in _processor.GetNpcsToTrack(_state.SwitchTargetLocations, _registry.TotalNpcList))
             {
+                if (npc == null || string.IsNullOrWhiteSpace(npc.Name)) continue;
                 if (!_state.SwitchTargetNPC || _registry.SelectedNpcNames.Contains(npc.Name))
                 {
                     _routeRenderer.DrawRoute(npc);

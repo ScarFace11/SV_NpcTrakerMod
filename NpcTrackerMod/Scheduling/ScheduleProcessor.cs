@@ -150,22 +150,21 @@ namespace NpcTrackerMod.Scheduling
             Dictionary<string, HashSet<Point>> totalPath)
         {
             var slots = rawData.Split('/');
-            string lastLocation = npc.currentLocation?.Name;
 
-            var npcLocation = _endLocationName == null
-                ? Game1.locations.FirstOrDefault(loc => loc.Name == npc.currentLocation?.Name)
-                : Game1.locations.FirstOrDefault(loc => loc.Name == _endLocationName);
+            // Используем TilePoint самого NPC — он всегда валиден, в отличие от поиска
+            // персонажа в characters (NPC может ещё не переместиться на DayStarted).
+            string startLocName = _endLocationName ?? npc.currentLocation?.Name;
             _endLocationName = null;
 
-            if (npcLocation == null)
+            if (!Game1.locations.Any(loc => loc.Name == startLocName))
             {
-                _monitor.Log($"Не найдена локация для '{npc.Name}'", LogLevel.Warn);
+                _monitor.Log($"Не найдена локация '{startLocName}' для '{npc.Name}'", LogLevel.Warn);
                 return;
             }
 
-            var npcInLocation = npcLocation.characters.FirstOrDefault(n => n.Name == npc.Name);
-            int npcX = (int)(npcInLocation?.TilePoint.X ?? 0);
-            int npcY = (int)(npcInLocation?.TilePoint.Y ?? 0);
+            string lastLocation = startLocName;
+            int npcX = npc.TilePoint.X;
+            int npcY = npc.TilePoint.Y;
 
             _lastLocationName = null;
 
@@ -257,7 +256,8 @@ namespace NpcTrackerMod.Scheduling
                 {
                     AppendSegment(result, _lastLocationName, currentSegment);
                     currentSegment = new HashSet<Point>();
-                    _lastLocationName = _mapper.GetDestination(_lastLocationName, prevCoord);
+                    string dest = _mapper.GetDestination(_lastLocationName, prevCoord);
+                    if (dest != null) _lastLocationName = dest;
                     prevCoord = pt;
                 }
             }
