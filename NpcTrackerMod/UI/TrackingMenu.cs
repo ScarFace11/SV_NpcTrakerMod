@@ -866,36 +866,25 @@ namespace NpcTrackerMod.UI
                     _npcSearch = _npcSearch.Substring(0, _npcSearch.Length - 1);
                     RebuildNpcFilter();
                 }
-                else if (_npcSearch.Length < 30)
-                {
-                    bool shift = Microsoft.Xna.Framework.Input.Keyboard.GetState().IsKeyDown(Keys.LeftShift)
-                              || Microsoft.Xna.Framework.Input.Keyboard.GetState().IsKeyDown(Keys.RightShift);
-                    char c = KeyToChar(key, shift);
-                    if (c != '\0')
-                    {
-                        _npcSearch += c;
-                        _npcScrollOffset = 0;
-                        RebuildNpcFilter();
-                    }
-                }
                 return; // не передаём базовому классу — он может закрыть меню
             }
 
             base.receiveKeyPress(key);
         }
 
-        private static char KeyToChar(Keys key, bool shift)
+        /// <summary>
+        /// Получает символ от операционной системы (поддерживает любую раскладку: кириллицу, латиницу и т.д.).
+        /// Вызывается SMAPI автоматически, когда поле поиска активно.
+        /// </summary>
+        public override void receiveChar(char c)
         {
-            if (key >= Keys.A && key <= Keys.Z)
-                return shift ? (char)('A' + (key - Keys.A)) : (char)('a' + (key - Keys.A));
-            if (key >= Keys.D0 && key <= Keys.D9)
-                return (char)('0' + (key - Keys.D0));
-            if (key >= Keys.NumPad0 && key <= Keys.NumPad9)
-                return (char)('0' + (key - Keys.NumPad0));
-            if (key == Keys.Space) return ' ';
-            if (key == Keys.OemMinus || key == Keys.Subtract) return '-';
-            if (key == Keys.OemPeriod || key == Keys.Decimal) return '.';
-            return '\0';
+            if (!_searchFocused) return;
+            if (_npcSearch.Length >= 30) return;
+            if (char.IsControl(c)) return; // фильтруем спец-символы (\t, \n и т.д.)
+
+            _npcSearch += c;
+            _npcScrollOffset = 0;
+            RebuildNpcFilter();
         }
 
         public override void receiveScrollWheelAction(int direction)
