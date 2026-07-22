@@ -28,11 +28,11 @@ namespace NpcTrackerMod.Tracking
             RouteRenderer routeRenderer,
             TileRenderer tileRenderer)
         {
-            _state        = state;
-            _registry     = registry;
-            _processor    = processor;
+            _state = state;
+            _registry = registry;
+            _processor = processor;
             _routeRenderer = routeRenderer;
-            _tileRenderer  = tileRenderer;
+            _tileRenderer = tileRenderer;
         }
 
         /// <summary>

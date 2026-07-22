@@ -30,10 +30,10 @@ namespace NpcTrackerMod.Scheduling
             NpcRegistry registry,
             LocationMapper mapper)
         {
-            _monitor  = monitor;
-            _store    = store;
+            _monitor = monitor;
+            _store = store;
             _registry = registry;
-            _mapper   = mapper;
+            _mapper = mapper;
         }
 
         // ── Публичный API ────────────────────────────────────────────────────────

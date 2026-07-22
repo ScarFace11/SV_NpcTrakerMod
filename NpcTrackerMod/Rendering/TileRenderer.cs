@@ -114,8 +114,13 @@ namespace NpcTrackerMod.Rendering
                 {
                     var map = Game1.currentLocation.Map.Layers[0];
                     for (int x = 0; x < map.LayerWidth; x++)
+<<<<<<< Updated upstream
                     for (int y = 0; y < map.LayerHeight; y++)
                         _cachedGridTiles.Add(new Point(x, y));
+=======
+                        for (int y = 0; y < map.LayerHeight; y++)
+                            _cachedGridTiles.Add(new Point(x, y));
+>>>>>>> Stashed changes
                 }
             }
 
@@ -147,10 +152,10 @@ namespace NpcTrackerMod.Rendering
         private void DrawTileOutline(SpriteBatch batch, Vector2 pos, Color color)
         {
             int x = (int)pos.X, y = (int)pos.Y;
-            batch.Draw(_lineTexture, new Rectangle(x,                   y,                   TileSize, 1),        color);
-            batch.Draw(_lineTexture, new Rectangle(x,                   y + TileSize - 1,    TileSize, 1),        color);
-            batch.Draw(_lineTexture, new Rectangle(x,                   y,                   1,        TileSize), color);
-            batch.Draw(_lineTexture, new Rectangle(x + TileSize - 1,    y,                   1,        TileSize), color);
+            batch.Draw(_lineTexture, new Rectangle(x, y, TileSize, 1), color);
+            batch.Draw(_lineTexture, new Rectangle(x, y + TileSize - 1, TileSize, 1), color);
+            batch.Draw(_lineTexture, new Rectangle(x, y, 1, TileSize), color);
+            batch.Draw(_lineTexture, new Rectangle(x + TileSize - 1, y, 1, TileSize), color);
         }
     }
 }

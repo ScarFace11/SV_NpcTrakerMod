@@ -44,6 +44,7 @@ namespace NpcTrackerMod
         {
             switch ((name ?? string.Empty).ToLowerInvariant())
             {
+<<<<<<< Updated upstream
                 case "green":  return Color.Green;
                 case "blue":   return Color.Blue;
                 case "red":    return Color.Red;
@@ -54,6 +55,18 @@ namespace NpcTrackerMod
                 case "cyan":   return Color.Cyan;
                 case "pink":   return Color.Pink;
                 default:       return fallback;
+=======
+                case "green": return Color.Green;
+                case "blue": return Color.Blue;
+                case "red": return Color.Red;
+                case "yellow": return Color.Yellow;
+                case "orange": return Color.Orange;
+                case "purple": return Color.Purple;
+                case "white": return Color.White;
+                case "cyan": return Color.Cyan;
+                case "pink": return Color.Pink;
+                default: return fallback;
+>>>>>>> Stashed changes
             }
         }
     }
