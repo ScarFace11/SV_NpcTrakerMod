@@ -874,15 +874,15 @@ namespace NpcTrackerMod.UI
 
         /// <summary>
         /// Получает символ от операционной системы (поддерживает любую раскладку: кириллицу, латиницу и т.д.).
-        /// Вызывается SMAPI автоматически, когда поле поиска активно.
+        /// Вызывается игрой для активного меню при каждом текстовом вводе.
         /// </summary>
-        public override void receiveChar(char c)
+        public override void receiveTextInput(char inputChar)
         {
             if (!_searchFocused) return;
             if (_npcSearch.Length >= 30) return;
-            if (char.IsControl(c)) return; // фильтруем спец-символы (\t, \n и т.д.)
+            if (char.IsControl(inputChar)) return; // фильтруем спец-символы (\t, \n и т.д.)
 
-            _npcSearch += c;
+            _npcSearch += inputChar;
             _npcScrollOffset = 0;
             RebuildNpcFilter();
         }
