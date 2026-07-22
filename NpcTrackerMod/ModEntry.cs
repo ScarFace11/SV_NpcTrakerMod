@@ -54,23 +54,27 @@ namespace NpcTrackerMod
             _scheduleProcessor = new ScheduleProcessor(Monitor, _pathStore, _registry, _locationMapper);
             _scheduleLoader = new CustomScheduleLoader(Monitor, helper, _scheduleProcessor, _registry);
 
-            // Rendering
-            _tileRenderer = new TileRenderer(Game1.graphics.GraphicsDevice);
-            _routeRenderer = new RouteRenderer(Monitor, _state, _pathStore, _tileRenderer);
-
-            // Tracking
-            _tracker = new NpcTracker(_state, _registry, _scheduleProcessor, _routeRenderer, _tileRenderer);
-
-            // Подписки на события
+            // Подписки на события, не требующие графики
+            helper.Events.GameLoop.GameLaunched += OnGameLaunched;
             helper.Events.GameLoop.DayStarted += OnDayStarted;
             helper.Events.GameLoop.DayEnding += OnDayEnding;
             helper.Events.GameLoop.UpdateTicked += OnUpdateTicked;
-            helper.Events.Input.ButtonPressed += OnButtonPressed;
-            helper.Events.Display.RenderedWorld += OnRenderedWorld;
-            helper.Events.Player.Warped += OnPlayerWarped;
 
             // Загружаем JSON-расписания модов заранее, чтобы они были готовы к DayStarted
             _scheduleLoader.LoadAll();
+        }
+
+        private void OnGameLaunched(object sender, GameLaunchedEventArgs e)
+        {
+            // Rendering и Tracking инициализируются здесь — GraphicsDevice гарантированно готов
+            _tileRenderer = new TileRenderer(Game1.graphics.GraphicsDevice);
+            _routeRenderer = new RouteRenderer(Monitor, _state, _pathStore, _tileRenderer);
+            _tracker = new NpcTracker(_state, _registry, _scheduleProcessor, _routeRenderer, _tileRenderer);
+
+            // Подписки на события, требующие инициализированного рендерера
+            Helper.Events.Input.ButtonPressed += OnButtonPressed;
+            Helper.Events.Display.RenderedWorld += OnRenderedWorld;
+            Helper.Events.Player.Warped += OnPlayerWarped;
         }
 
         // ── SMAPI Events ──────────────────────────────────────────────────────────
@@ -245,7 +249,11 @@ namespace NpcTrackerMod
                 string loc = entry.targetLocationName ?? "?";
                 return $"→ {loc} в {RouteRenderer.FormatTime(nextTime)}";
             }
-            catch { return null; }
+            catch (Exception ex)
+            {
+                Monitor.Log($"GetNextScheduleLabel({npcName}): {ex.Message}", LogLevel.Trace);
+                return null;
+            }
         }
 
         // ── Утилиты ───────────────────────────────────────────────────────────────
